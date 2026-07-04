@@ -7,7 +7,13 @@ export default function Home() {
     const router = useRouter();
 
     useEffect(() => {
-        router.replace("/student-login");
+        const sid = localStorage.getItem("studentSessionId");
+        const usn = localStorage.getItem("studentUsn");
+        if (sid && usn) {
+            router.replace("/student/dashboard");
+        } else {
+            router.replace("/student-login");
+        }
     }, [router]);
 
     return (

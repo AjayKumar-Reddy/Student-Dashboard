@@ -96,11 +96,12 @@ export default function StudentLogin() {
     const [mounted, setMounted] = useState(false);
 
     React.useEffect(() => {
-        setMounted(true);
         const sid = localStorage.getItem("studentSessionId");
-        const usn = localStorage.getItem("studentUsn");
-        if (sid && usn) {
-            router.push("/student/dashboard");
+        const userUsn = localStorage.getItem("studentUsn");
+        if (sid && userUsn) {
+            router.replace("/student/dashboard");
+        } else {
+            setMounted(true);
         }
     }, [router]);
 
@@ -145,6 +146,12 @@ export default function StudentLogin() {
             setLoading(false);
         }
     };
+
+    if (!mounted) {
+        return (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: 'var(--bg-primary, #0A0A0A)' }} />
+        );
+    }
 
     return (
         <div className="login-page">

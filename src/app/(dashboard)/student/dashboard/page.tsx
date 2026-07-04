@@ -47,6 +47,12 @@ export default function StudentDashboard() {
     const [student, setStudent] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [mounted, setMounted] = useState(false);
+
+    // PWA Install State
+    const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+    const [isInstallable, setIsInstallable] = useState(false);
+    const [isIOS, setIsIOS] = useState(false);
+    const [showIOSPrompt, setShowIOSPrompt] = useState(false);
     
     // 1b. Route-aware Tab State
     const searchParams = useSearchParams();
@@ -67,7 +73,41 @@ export default function StudentDashboard() {
     // 2. Lifecycle
     useEffect(() => {
         setMounted(true);
+
+        const handleBeforeInstallPrompt = (e: Event) => {
+            e.preventDefault();
+            setDeferredPrompt(e);
+            setIsInstallable(true);
+        };
+        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+        // iOS detection
+        const userAgent = window.navigator.userAgent.toLowerCase();
+        const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
+        const isStandalone = ('standalone' in window.navigator) && ((window.navigator as any).standalone);
+        
+        setIsIOS(isIosDevice);
+        if (isIosDevice && !isStandalone) {
+            const dismissed = localStorage.getItem("dismissedIOSInstallPrompt");
+            if (!dismissed) {
+                setShowIOSPrompt(true);
+            }
+        }
+
+        return () => {
+            window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+        };
     }, []);
+
+    const handleInstallPWA = async () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+            setIsInstallable(false);
+            setDeferredPrompt(null);
+        }
+    };
 
     useEffect(() => {
         const handleOutsideClick = (e: MouseEvent) => {
@@ -340,6 +380,12 @@ export default function StudentDashboard() {
                             {tab.icon} <span>{tab.label}</span>
                         </button>
                     ))}
+                    {isInstallable && (
+                        <button className="nav-button pwa-install-btn" onClick={handleInstallPWA} style={{ marginTop: 'auto', background: 'rgba(0, 173, 181, 0.1)', color: 'var(--accent-primary, #00ADB5)', border: '1px solid rgba(0, 173, 181, 0.2)' }}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m8 17 4 4 4-4"/></svg>
+                            <span>Install Web App</span>
+                        </button>
+                    )}
                 </nav>
                 <SidebarProfile user={student} onLogout={handleLogout} />
             </aside>
@@ -378,6 +424,28 @@ export default function StudentDashboard() {
                                 <div style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--text-primary)' }}>{student?.name}</div>
                                 <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{student?.usn}</div>
                             </div>
+                            {isInstallable && (
+                                <button 
+                                    onClick={handleInstallPWA}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        width: '100%',
+                                        padding: '8px 10px',
+                                        background: 'rgba(0, 173, 181, 0.1)',
+                                        color: '#00ADB5',
+                                        border: '1px solid rgba(0, 173, 181, 0.2)',
+                                        borderRadius: '8px',
+                                        fontSize: '13px',
+                                        fontWeight: 600,
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m8 17 4 4 4-4"/></svg>
+                                    Install Web App
+                                </button>
+                            )}
                             <button 
                                 onClick={handleLogout}
                                 style={{
@@ -495,6 +563,50 @@ export default function StudentDashboard() {
                     </button>
                 ))}
             </nav>
+
+            {showIOSPrompt && (
+                <div className="ios-pwa-prompt" style={{
+                    position: 'fixed',
+                    bottom: '80px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    background: 'var(--bg-card, #1B2333)',
+                    border: '1px solid var(--accent-primary, #00ADB5)',
+                    borderRadius: '16px',
+                    padding: '16px',
+                    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.5)',
+                    width: 'calc(100% - 32px)',
+                    maxWidth: '400px',
+                    zIndex: 2000,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px',
+                    animation: 'slideUp 0.3s ease-out'
+                }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Image src="/logo-icon.svg" alt="logo" width={24} height={24} />
+                            <span style={{ fontWeight: 'bold', fontSize: '14px', color: 'var(--text-primary)' }}>Install MSR Insight</span>
+                        </div>
+                        <button 
+                            onClick={() => {
+                                setShowIOSPrompt(false);
+                                localStorage.setItem("dismissedIOSInstallPrompt", "true");
+                            }}
+                            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+                        >
+                            <X size={16} />
+                        </button>
+                    </div>
+                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
+                        To install this app on your iPhone:
+                        <ol style={{ paddingLeft: '20px', margin: '6px 0 0 0' }}>
+                            <li>Tap the <strong>Share</strong> button <svg style={{ display: 'inline', verticalAlign: 'middle' }} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg> at the bottom.</li>
+                            <li>Select <strong>Add to Home Screen</strong> <svg style={{ display: 'inline', verticalAlign: 'middle' }} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>.</li>
+                        </ol>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
