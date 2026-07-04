@@ -1,0 +1,143 @@
+/* Custom Dropdown Styling */
+.custom-dropdown {
+  position: relative;
+  flex: 1;
+  min-width: 0;           /* Prevent flex overflow */
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.dropdown-trigger {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  min-height: 40px;       /* Touch-friendly; grows with content */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
+}
+
+.dropdown-trigger:hover {
+  background: var(--bg-surface);
+  border-color: var(--border-bright);
+}
+
+.custom-dropdown.is-open .dropdown-trigger {
+  border-color: var(--accent-primary);
+  background: var(--bg-surface);
+}
+
+.selected-label {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.custom-dropdown.is-open .selected-label,
+.dropdown-trigger:hover .selected-label {
+  color: var(--text-primary);
+}
+
+.chevron-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--text-muted);
+  transition: transform 0.2s ease, color 0.2s ease;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.custom-dropdown.is-open .chevron-icon {
+  transform: rotate(180deg);
+  color: var(--accent-primary);
+}
+
+/* Dropdown Menu */
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 100%;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 4px;
+  z-index: 1000;
+  box-shadow: var(--shadow-lg);
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.dropdown-item {
+  padding: 8px 10px;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.2s ease;
+}
+
+.dropdown-item:hover {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.dropdown-item.is-selected {
+  background: var(--bg-surface);
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.check-icon {
+  width: 12px;
+  height: 12px;
+}
+
+/* Scrollbar for the menu */
+.dropdown-menu::-webkit-scrollbar {
+  width: 4px;
+}
+
+.dropdown-menu::-webkit-scrollbar-thumb {
+  background: var(--border-subtle);
+  border-radius: 10px;
+}
+
+/* Animation */
+.fade-in-scale {
+  animation: fadeInScale 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ── Responsive: full-width dropdown menu on narrow screens ── */
+@media (max-width: 479px) {
+  .dropdown-menu {
+    min-width: 100%;        /* Menu fills trigger width */
+    max-height: 220px;      /* Shorter list on tiny viewports */
+  }
+
+  .dropdown-item {
+    font-size: 0.82rem;
+    padding: 10px 10px;     /* Larger tap target */
+  }
+}
