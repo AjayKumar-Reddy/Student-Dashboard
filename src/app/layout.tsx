@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "@/styles/globals.css";
 import AppWrapper from "@/components/AppWrapper";
+import { Analytics } from "@vercel/analytics/next";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -33,6 +34,7 @@ export default function RootLayout({
         <AppWrapper>
           {children}
         </AppWrapper>
+        <Analytics />
       </body>
     </html>
   );
