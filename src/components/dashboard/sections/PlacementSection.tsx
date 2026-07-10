@@ -99,14 +99,18 @@ const parseEventData = (event: any): ParsedEvent => {
 
     const allText = [event.title, event.textContent, ...(event.details || [])].join(" ");
 
-    const appliedMatch = allText.match(/(?:Applied\s+On|Applied\s+Date|Applied)[:\s]+([0-9a-zA-Z\s\-/]+)/i);
+    const appliedMatch = allText.match(/(?:Applied\s+On|Applied\s+Date|Applied|Apply\s+Before)[:\s]+([0-9a-zA-Z\s\-/: ]+)/i);
     if (appliedMatch) {
-        appliedDate = appliedMatch[1].trim().split(/(?:\s{2,}|,|\.|\()/)[0].trim();
+        const rawDate = appliedMatch[1].trim();
+        const dateOnlyMatch = rawDate.match(/\b\d{1,2}[-/\s]\d{1,2}[-/\s]\d{4}\b/);
+        appliedDate = dateOnlyMatch ? dateOnlyMatch[0] : rawDate.split(/(?:\s{2,}|,|\.|\()/)[0].trim();
     }
 
-    const eventDateMatch = allText.match(/(?:Event\s+Date|Date\s+of\s+Event|Event)[:\s]+([0-9a-zA-Z\s\-/]+)/i);
+    const eventDateMatch = allText.match(/(?:Event\s+Date|Date\s+of\s+Event|Event)[:\s]+([0-9a-zA-Z\s\-/: ]+)/i);
     if (eventDateMatch) {
-        eventDate = eventDateMatch[1].trim().split(/(?:\s{2,}|,|\.|\()/)[0].trim();
+        const rawDate = eventDateMatch[1].trim();
+        const dateOnlyMatch = rawDate.match(/\b\d{1,2}[-/\s]\d{1,2}[-/\s]\d{4}\b/);
+        eventDate = dateOnlyMatch ? dateOnlyMatch[0] : rawDate.split(/(?:\s{2,}|,|\.|\()/)[0].trim();
     }
 
     const ctcMatch = allText.match(/(?:₹?\s*\d+(?:\.\d+)?\s*(?:LPA|Lakhs|L)|CTC[:\s]+₹?\s*\d+(?:\.\d+)?\s*(?:LPA|Lakhs|L))/i);
@@ -148,12 +152,45 @@ const PlacementSection: React.FC<PlacementSectionProps> = ({
     formatTime,
 }) => {
     const [activeSubTab, setActiveSubTab] = useState<"profile" | "eligibility" | "in_progress" | "completed">("eligibility");
-    const [selectedInProgressIndex, setSelectedInProgressIndex] = useState<number>(0);
+    const [selectedEventIndex, setSelectedEventIndex] = useState<number>(0);
+    const [eligibilityFilter, setEligibilityFilter] = useState<"active" | "exhausted">("active");
+
+    const handleSubTabChange = (tab: "profile" | "eligibility" | "in_progress" | "completed") => {
+        setActiveSubTab(tab);
+        setSelectedEventIndex(0);
+        setEligibilityFilter("active");
+    };
 
     const profile = placementData?.profile || {};
     const eligibilityEvents = placementData?.eligibilityEvents || [];
     const inProgressEvents = placementData?.inProgressEvents || [];
     const completedEvents = placementData?.completedEvents || [];
+
+    // Helper to identify exhausted/expired registration events
+    const isEventExhausted = (parsed: ParsedEvent): boolean => {
+        const statusLower = (parsed.status || "").toLowerCase();
+        const rawLower = JSON.stringify(parsed.raw).toLowerCase();
+        if (statusLower.includes("closed") || rawLower.includes("registration closed") || rawLower.includes("closed")) {
+            return true;
+        }
+        if (parsed.appliedDate) {
+            const d = parseDate(parsed.appliedDate);
+            if (d) {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                d.setHours(0, 0, 0, 0);
+                if (d.getTime() < today.getTime()) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    };
+
+    const activeEligibilityEvents = eligibilityEvents.filter(e => !isEventExhausted(parseEventData(e)));
+    const exhaustedEligibilityEvents = eligibilityEvents.filter(e => isEventExhausted(parseEventData(e)));
+
+    const currentEligibilityEvents = eligibilityFilter === "active" ? activeEligibilityEvents : exhaustedEligibilityEvents;
 
     const isProfileEmpty = Object.keys(profile).length === 0;
     const hasAnyData = !isProfileEmpty || eligibilityEvents.length > 0 || inProgressEvents.length > 0 || completedEvents.length > 0;
@@ -298,7 +335,7 @@ const PlacementSection: React.FC<PlacementSectionProps> = ({
                         display: none;
                     }
                     .company-mobile-dropdown {
-                        display: none;
+                        display: none !important;
                     }
                     @media (max-width: 900px) {
                         .placement-desktop-timeline {
@@ -355,24 +392,24 @@ const PlacementSection: React.FC<PlacementSectionProps> = ({
                             margin: 2px 0;
                         }
                         .company-mobile-dropdown {
-                            display: block !important;
+                            display: flex !important;
                         }
-                        .in-progress-event-item {
+                        .placement-event-item {
                             display: none !important;
                         }
-                        .in-progress-event-item.mobile-active {
+                        .placement-event-item.mobile-active {
                             display: block !important;
                         }
                     }
                 `}} />
 
-                {/* Mobile Dropdown for switching In-Progress Events */}
-                {isInProgressCategory && events.length > 1 && (
-                    <div className="company-mobile-dropdown" style={{ marginBottom: "16px" }}>
-                        <div style={{ position: "relative", width: "100%" }}>
+                {/* Mobile Dropdown for switching Events in categories with multiple entries */}
+                {events.length > 1 && (
+                    <div className="company-mobile-dropdown" style={{ marginBottom: "16px", gap: "10px", alignItems: "center", width: "100%" }}>
+                        <div style={{ flex: 1, minWidth: 0, position: "relative" }}>
                             <select
-                                value={selectedInProgressIndex}
-                                onChange={(e) => setSelectedInProgressIndex(parseInt(e.target.value, 10))}
+                                value={selectedEventIndex}
+                                onChange={(e) => setSelectedEventIndex(parseInt(e.target.value, 10))}
                                 style={{
                                     width: "100%",
                                     padding: "10px 14px",
@@ -401,6 +438,18 @@ const PlacementSection: React.FC<PlacementSectionProps> = ({
                                 })}
                             </select>
                         </div>
+                        <div style={{
+                            background: "rgba(0, 173, 181, 0.1)",
+                            color: "var(--accent-primary, #00ADB5)",
+                            padding: "10px 14px",
+                            borderRadius: "10px",
+                            fontSize: "13px",
+                            fontWeight: "700",
+                            border: "1px solid rgba(0, 173, 181, 0.2)",
+                            whiteSpace: "nowrap"
+                        }}>
+                            {events.length} {events.length === 1 ? "Event" : "Events"}
+                        </div>
                     </div>
                 )}
 
@@ -412,7 +461,7 @@ const PlacementSection: React.FC<PlacementSectionProps> = ({
                     return (
                         <div 
                             key={idx} 
-                            className={`in-progress-event-item ${!isInProgressCategory || events.length <= 1 || selectedInProgressIndex === idx ? 'mobile-active' : ''}`}
+                            className={`placement-event-item ${events.length <= 1 || selectedEventIndex === idx ? 'mobile-active' : ''}`}
                             style={{ 
                                 background: "var(--bg-card, #131A26)", 
                                 border: "1px solid var(--border-subtle, rgba(255, 255, 255, 0.08))",
@@ -443,6 +492,7 @@ const PlacementSection: React.FC<PlacementSectionProps> = ({
                                             fontSize: "13px", 
                                             fontWeight: "600",
                                             display: "inline-flex",
+                                            flexDirection: "row",
                                             alignItems: "center",
                                             gap: "8px",
                                             background: "rgba(0, 173, 181, 0.1)",
@@ -452,9 +502,9 @@ const PlacementSection: React.FC<PlacementSectionProps> = ({
                                             textDecoration: "none",
                                             transition: "all 0.2s ease"
                                         }}
-                                        className="nav-button"
+                                        className="placement-action-btn"
                                     >
-                                        Register / View Details <ExternalLink size={14} />
+                                        Register <ExternalLink size={14} />
                                     </a>
                                 )}
                             </div>
@@ -475,7 +525,9 @@ const PlacementSection: React.FC<PlacementSectionProps> = ({
 
                                         {/* 2. Applied Date */}
                                         <div className="desktop-step-card">
-                                            <span className="desktop-step-label">Applied On</span>
+                                            <span className="desktop-step-label">
+                                                {typeLabel.toLowerCase().includes("register") ? "Apply Before" : "Applied On"}
+                                            </span>
                                             <span className="desktop-step-value">{parsed.appliedDate || "TBD"}</span>
                                             {appliedRelative ? (
                                                 <span style={{ fontSize: "11px", color: appliedRelative.color, fontWeight: "600" }}>{appliedRelative.text}</span>
@@ -532,7 +584,9 @@ const PlacementSection: React.FC<PlacementSectionProps> = ({
                                             A
                                         </div>
                                         <div className="mobile-step-content">
-                                            <h4 className="mobile-step-title">Applied On</h4>
+                                            <h4 className="mobile-step-title">
+                                                {typeLabel.toLowerCase().includes("register") ? "Apply Before" : "Applied On"}
+                                            </h4>
                                             <span className="mobile-step-subtitle">
                                                 {parsed.appliedDate || "TBD"}{appliedRelative && ` • ${appliedRelative.text}`}
                                             </span>
@@ -723,7 +777,7 @@ const PlacementSection: React.FC<PlacementSectionProps> = ({
                                             ].map(tab => (
                                                 <button
                                                     key={tab.id}
-                                                    onClick={() => setActiveSubTab(tab.id as any)}
+                                                    onClick={() => handleSubTabChange(tab.id as any)}
                                                     className={`placements-tab-btn ${activeSubTab === tab.id ? 'active' : ''}`}
                                                     style={{
                                                         padding: "8px 16px",
@@ -766,7 +820,7 @@ const PlacementSection: React.FC<PlacementSectionProps> = ({
                                             value={activeSubTab === "profile" ? "select" : activeSubTab}
                                             onChange={(e) => {
                                                 if (e.target.value !== "select") {
-                                                    setActiveSubTab(e.target.value as any);
+                                                    handleSubTabChange(e.target.value as any);
                                                 }
                                             }}
                                             style={{
@@ -802,7 +856,7 @@ const PlacementSection: React.FC<PlacementSectionProps> = ({
                             {!isProfileEmpty && (
                                 <div style={{ display: "flex", gap: "4px", flexShrink: 0 }}>
                                     <button
-                                        onClick={() => setActiveSubTab("profile")}
+                                        onClick={() => handleSubTabChange("profile")}
                                         className={`placements-tab-btn ${activeSubTab === "profile" ? 'profile-active' : ''}`}
                                         style={{
                                             padding: "8px 16px",
@@ -927,7 +981,72 @@ const PlacementSection: React.FC<PlacementSectionProps> = ({
                             </div>
                         )}
 
-                        {activeSubTab === "eligibility" && renderEventsList(eligibilityEvents, "events to register", <Calendar size={32} color="var(--text-muted)" />)}
+                        {activeSubTab === "eligibility" && (
+                            <>
+                                {/* Segmented control / filter switcher for Active vs. Exhausted opportunities */}
+                                <div style={{ display: "flex", gap: "8px", marginBottom: "20px", marginTop: "16px" }}>
+                                    <button
+                                        onClick={() => { setEligibilityFilter("active"); setSelectedEventIndex(0); }}
+                                        style={{
+                                            padding: "8px 16px",
+                                            fontSize: "12px",
+                                            fontWeight: "700",
+                                            borderRadius: "20px",
+                                            border: "none",
+                                            background: eligibilityFilter === "active" ? "rgba(0, 173, 181, 0.15)" : "var(--bg-secondary, rgba(255, 255, 255, 0.02))",
+                                            color: eligibilityFilter === "active" ? "var(--accent-primary, #00ADB5)" : "var(--text-muted)",
+                                            cursor: "pointer",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: "6px",
+                                            transition: "all 0.2s ease"
+                                        }}
+                                    >
+                                        Active / Upcoming
+                                        <span style={{
+                                            background: eligibilityFilter === "active" ? "var(--accent-primary, #00ADB5)" : "rgba(255,255,255,0.08)",
+                                            color: eligibilityFilter === "active" ? "#fff" : "var(--text-primary)",
+                                            fontSize: "10px",
+                                            padding: "2px 6px",
+                                            borderRadius: "10px",
+                                            fontWeight: "800"
+                                        }}>
+                                            {activeEligibilityEvents.length}
+                                        </span>
+                                    </button>
+                                    <button
+                                        onClick={() => { setEligibilityFilter("exhausted"); setSelectedEventIndex(0); }}
+                                        style={{
+                                            padding: "8px 16px",
+                                            fontSize: "12px",
+                                            fontWeight: "700",
+                                            borderRadius: "20px",
+                                            border: "none",
+                                            background: eligibilityFilter === "exhausted" ? "rgba(239, 68, 68, 0.15)" : "var(--bg-secondary, rgba(255, 255, 255, 0.02))",
+                                            color: eligibilityFilter === "exhausted" ? "#ef4444" : "var(--text-muted)",
+                                            cursor: "pointer",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: "6px",
+                                            transition: "all 0.2s ease"
+                                        }}
+                                    >
+                                        Exhausted
+                                        <span style={{
+                                            background: eligibilityFilter === "exhausted" ? "#ef4444" : "rgba(255,255,255,0.08)",
+                                            color: eligibilityFilter === "exhausted" ? "#fff" : "var(--text-primary)",
+                                            fontSize: "10px",
+                                            padding: "2px 6px",
+                                            borderRadius: "10px",
+                                            fontWeight: "800"
+                                        }}>
+                                            {exhaustedEligibilityEvents.length}
+                                        </span>
+                                    </button>
+                                </div>
+                                {renderEventsList(currentEligibilityEvents, "events to register", <Calendar size={32} color="var(--text-muted)" />)}
+                            </>
+                        )}
                         {activeSubTab === "in_progress" && renderEventsList(inProgressEvents, "events in progress", <Clock size={32} color="var(--text-muted)" />)}
                         {activeSubTab === "completed" && renderEventsList(completedEvents, "completed events", <CheckCircle size={32} color="var(--text-muted)" />)}
                     </div>
