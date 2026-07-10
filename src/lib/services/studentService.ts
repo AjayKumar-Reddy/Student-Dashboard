@@ -74,8 +74,16 @@ export class StudentService {
 
     return results;
   }
+
+  async deleteStudent(usn: string) {
+    const normalizedUsn = usn.toUpperCase();
+    await prisma.student.delete({
+      where: { usn: normalizedUsn }
+    });
+  }
 }
 
 const studentService = new StudentService();
 export const syncStudents = (data: Record<string, any>) => studentService.syncStudents(data);
 export default studentService;
+// Force re-build cache update

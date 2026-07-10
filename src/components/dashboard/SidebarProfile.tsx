@@ -11,9 +11,10 @@ interface SidebarProfileProps {
     usn?: string;
   } | null;
   onLogout: () => void;
+  onDeleteData?: () => void;
 }
 
-const SidebarProfile: React.FC<SidebarProfileProps> = ({ user, onLogout }) => {
+const SidebarProfile: React.FC<SidebarProfileProps> = ({ user, onLogout, onDeleteData }) => {
   if (!user) {
     return (
       <div className="sidebar-profile-skeleton">
@@ -58,14 +59,36 @@ const SidebarProfile: React.FC<SidebarProfileProps> = ({ user, onLogout }) => {
             </div>
           )}
         </div>
-        <div className="profile-details">
+        <div className="profile-details" style={{ display: "flex", flexDirection: "column" }}>
           <span className="profile-name" title={user.name}>
             {user.name}
           </span>
-          <button onClick={onLogout} className="profile-logout-link" title="Logout">
-            <LogOut size={12} />
-            <span>Logout</span>
-          </button>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", marginTop: "4px" }}>
+            <button onClick={onLogout} className="profile-logout-link" title="Logout">
+              <LogOut size={12} />
+              <span>Logout</span>
+            </button>
+            {onDeleteData && (
+              <button 
+                onClick={onDeleteData} 
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "var(--text-muted, #94a3b8)",
+                  fontSize: "10px",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                  padding: "4px 0",
+                  textDecoration: "underline",
+                  transition: "color 0.2s"
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.color = "#ef4444"}
+                onMouseLeave={(e) => e.currentTarget.style.color = "var(--text-muted, #94a3b8)"}
+              >
+                Delete Account
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -68,6 +68,9 @@ export default function StudentDashboard() {
     const [selectedHistoryIdx, setSelectedHistoryIdx] = useState<number>(0);
     const [updateStatus, setUpdateStatus] = useState<'loading' | 'success' | 'error' | null>(null);
     const [showMobileProfileMenu, setShowMobileProfileMenu] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [confirmUsnInput, setConfirmUsnInput] = useState("");
 
     const { formatTime, isCooldownActive } = useCooldown(nextAllowedAt);
 
@@ -320,6 +323,33 @@ export default function StudentDashboard() {
     };
     const handleLogout = () => { localStorage.clear(); router.push("/"); };
 
+    const handleDeleteAccount = async () => {
+        if (confirmUsnInput.trim().toUpperCase() !== stdUsn.toUpperCase()) {
+            return;
+        }
+
+        try {
+            setIsDeleting(true);
+            const sessionId = localStorage.getItem("studentSessionId");
+            const response = await axios.delete(`${API_BASE_URL}/api/auth/delete`, {
+                headers: { "x-session-id": sessionId }
+            });
+            if (response.data.success) {
+                localStorage.clear();
+                router.push("/student-login");
+            } else {
+                alert(response.data.message || "Failed to delete account");
+            }
+        } catch (err: any) {
+            console.error("Error deleting student data:", err);
+            alert(err.response?.data?.message || "Failed to delete account");
+        } finally {
+            setIsDeleting(false);
+            setShowDeleteModal(false);
+            setConfirmUsnInput("");
+        }
+    };
+
     const handleUpdate = async () => {
         if (isCooldownActive) return;
         const sessionId = localStorage.getItem("studentSessionId");
@@ -389,7 +419,7 @@ export default function StudentDashboard() {
                         </button>
                     )}
                 </nav>
-                <SidebarProfile user={student} onLogout={handleLogout} />
+                <SidebarProfile user={student} onLogout={handleLogout} onDeleteData={() => setShowDeleteModal(true)} />
             </aside>
 
             {/* Mobile Top Navbar */}
@@ -467,6 +497,28 @@ export default function StudentDashboard() {
                             >
                                 <LogOut size={16} /> Logout
                             </button>
+                            <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', marginTop: '4px', paddingTop: '8px', textAlign: 'center' }}>
+                                <button
+                                    onClick={() => {
+                                        setShowMobileProfileMenu(false);
+                                        setShowDeleteModal(true);
+                                    }}
+                                    style={{
+                                        background: 'transparent',
+                                        border: 'none',
+                                        color: 'var(--text-muted, #94a3b8)',
+                                        fontSize: '11px',
+                                        fontWeight: '600',
+                                        cursor: 'pointer',
+                                        textDecoration: 'underline',
+                                        width: '100%',
+                                        textAlign: 'center',
+                                        padding: '4px 0'
+                                    }}
+                                >
+                                    Delete Account
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -617,6 +669,101 @@ export default function StudentDashboard() {
                             <li>Tap the <strong>Share</strong> button <svg style={{ display: 'inline', verticalAlign: 'middle' }} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg> at the bottom.</li>
                             <li>Select <strong>Add to Home Screen</strong> <svg style={{ display: 'inline', verticalAlign: 'middle' }} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>.</li>
                         </ol>
+                    </div>
+                </div>
+            )}
+
+            {showDeleteModal && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'rgba(0, 0, 0, 0.85)',
+                    backdropFilter: 'blur(8px)',
+                    zIndex: 2000,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '20px'
+                }}>
+                    <div style={{
+                        background: 'var(--bg-card, #131A26)',
+                        border: '1px solid rgba(239, 68, 68, 0.2)',
+                        borderRadius: '16px',
+                        padding: '30px',
+                        maxWidth: '420px',
+                        width: '100%',
+                        textAlign: 'center',
+                        boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+                        animation: 'fadeIn 0.2s ease'
+                    }}>
+                        <h3 style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--text-primary)', margin: '0 0 10px 0' }}>
+                            Are you leaving us like that?
+                        </h3>
+                        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.5', margin: '0 0 20px 0' }}>
+                            All your academic logs, simulated grades, and placement records will be permanently erased. To confirm deletion, type your USN (<strong>{stdUsn}</strong>) below:
+                        </p>
+                        <input
+                            type="text"
+                            value={confirmUsnInput}
+                            onChange={(e) => setConfirmUsnInput(e.target.value)}
+                            placeholder="Enter USN to confirm"
+                            style={{
+                                width: '100%',
+                                padding: '10px 14px',
+                                background: 'var(--bg-secondary, #1B2333)',
+                                border: '1px solid var(--border-subtle, rgba(255, 255, 255, 0.08))',
+                                borderRadius: '10px',
+                                color: 'var(--text-primary)',
+                                outline: 'none',
+                                textAlign: 'center',
+                                fontSize: '14px',
+                                fontWeight: 'bold',
+                                letterSpacing: '1px',
+                                marginBottom: '20px'
+                            }}
+                        />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            <button 
+                                onClick={handleDeleteAccount}
+                                disabled={isDeleting || confirmUsnInput.trim().toUpperCase() !== stdUsn.toUpperCase()}
+                                style={{
+                                    width: '100%',
+                                    padding: '12px',
+                                    background: confirmUsnInput.trim().toUpperCase() === stdUsn.toUpperCase() ? '#EF4444' : 'rgba(239, 68, 68, 0.2)',
+                                    color: confirmUsnInput.trim().toUpperCase() === stdUsn.toUpperCase() ? '#fff' : 'rgba(255, 255, 255, 0.3)',
+                                    border: 'none',
+                                    borderRadius: '10px',
+                                    fontWeight: 'bold',
+                                    cursor: (isDeleting || confirmUsnInput.trim().toUpperCase() !== stdUsn.toUpperCase()) ? 'not-allowed' : 'pointer',
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                {isDeleting ? "Erasing everything..." : "Yes, delete permanently"}
+                            </button>
+                            <button 
+                                onClick={() => {
+                                    setShowDeleteModal(false);
+                                    setConfirmUsnInput("");
+                                }}
+                                disabled={isDeleting}
+                                style={{
+                                    width: '100%',
+                                    padding: '12px',
+                                    background: 'var(--bg-secondary, #1B2333)',
+                                    color: 'var(--text-primary)',
+                                    border: '1px solid var(--border-subtle, rgba(255, 255, 255, 0.08))',
+                                    borderRadius: '10px',
+                                    fontWeight: 'bold',
+                                    cursor: isDeleting ? 'not-allowed' : 'pointer',
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                No, I want to stay!
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
