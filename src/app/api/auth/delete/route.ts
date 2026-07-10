@@ -2,13 +2,13 @@ import { NextResponse } from "next/server";
 import { verifyToken } from "@/lib/utils/jwt";
 import studentService from "@/lib/services/studentService";
 
-export async function GET(request: Request) {
+export async function DELETE(request: Request) {
   try {
     const sessionId = request.headers.get("x-session-id");
-    console.log("[Profile API] Received sessionId:", sessionId ? `${sessionId.substring(0, 15)}... (len: ${sessionId.length})` : "MISSING");
+    console.log("[Delete API] Received request for sessionId verification");
 
     if (!sessionId || sessionId === "null" || sessionId === "undefined") {
-      console.warn("[Profile API] Invalid or missing sessionId header");
+      console.warn("[Delete API] Invalid or missing sessionId header");
       return NextResponse.json(
         { success: false, message: "No session ID provided" },
         { status: 401 }
@@ -17,34 +17,29 @@ export async function GET(request: Request) {
 
     const payload = verifyToken(sessionId);
     if (!payload || !payload.usn) {
-      console.warn("[Profile API] JWT verification failed for sessionId");
+      console.warn("[Delete API] JWT verification failed");
       return NextResponse.json(
         { success: false, message: "Session expired or invalid" },
         { status: 401 }
       );
     }
 
-    const student = await studentService.getStudentDashboard(payload.usn);
-    if (!student) {
-      return NextResponse.json(
-        { success: false, message: "Student not found" },
-        { status: 404 }
-      );
-    }
+    console.log(`[Delete API] Authenticated USN: ${payload.usn}. Proceeding with secure deletion.`);
+
+    // Securely delete the student record associated with the authenticated USN
+    await studentService.deleteStudent(payload.usn);
+
+    console.log(`[Delete API] Successfully deleted student database record for USN: ${payload.usn}`);
 
     return NextResponse.json({
       success: true,
-      data: {
-        ...student,
-        role: "student",
-      },
+      message: "Student profile data has been deleted permanently."
     });
   } catch (error: any) {
-    console.error(`[Profile API Error]`, error);
+    console.error(`[Delete API Error]`, error);
     return NextResponse.json(
       { success: false, message: "An internal server error occurred." },
       { status: 500 }
     );
   }
 }
-// Invalidate cache force reload
