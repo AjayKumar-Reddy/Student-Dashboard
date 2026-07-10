@@ -46,6 +46,7 @@ export class StudentService {
           last_updated: studentData.last_updated,
           subjects: studentData.subjects,
           exam_history: studentData.exam_history || [],
+          placement: studentData.placement || null,
         };
 
         await prisma.student.upsert({

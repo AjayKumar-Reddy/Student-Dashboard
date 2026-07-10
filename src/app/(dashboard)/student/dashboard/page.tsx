@@ -4,7 +4,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import axios from "axios";
 import {
-    Target, History as HistoryIcon, Award, Menu, X, Gamepad2, LogOut, BookOpen
+    Target, History as HistoryIcon, Award, Menu, X, Gamepad2, LogOut, BookOpen, Briefcase
 } from "lucide-react";
 import "@/styles/StudentDashboard.css";
 import { API_BASE_URL } from "@/config/api.config";
@@ -24,6 +24,7 @@ import SimulatorSection from "@/components/dashboard/sections/SimulatorSection";
 import NotesSection from "@/components/dashboard/sections/NotesSection";
 import LoadingScreen from "@/components/dashboard/LoadingScreen";
 import BirthdayBanner from "@/components/dashboard/BirthdayBanner";
+import PlacementSection from "@/components/dashboard/sections/PlacementSection";
 
 
 const GRADE_COLORS: Record<string, string> = {
@@ -373,6 +374,7 @@ export default function StudentDashboard() {
                         { id: 'performance', icon: <Target size={20} />, label: 'Current Semester' },
                         { id: 'notes', icon: <BookOpen size={20} />, label: 'Notes & PYQs' },
                         { id: 'analytics', icon: <BarChart3 size={20} />, label: 'Analytics' },
+                        { id: 'placement', icon: <Briefcase size={20} />, label: 'Placements' },
                         { id: 'history', icon: <HistoryIcon size={20} />, label: 'Exam History' },
                         { id: 'simulator', icon: <Gamepad2 size={20} />, label: 'Simulator' },
                     ].map(tab => (
@@ -525,6 +527,16 @@ export default function StudentDashboard() {
                                     examHistory={examHistory}
                                 />
                             )}
+                            {activeTab === 'placement' && (
+                                <PlacementSection
+                                    studentName={student?.name}
+                                    placementData={detailsBlob.placement}
+                                    handleUpdate={handleUpdate}
+                                    updateStatus={updateStatus}
+                                    isCooldownActive={isCooldownActive}
+                                    formatTime={formatTime}
+                                />
+                            )}
                             {activeTab === 'simulator' && (
                                 <SimulatorSection
                                     studentName={student?.name}
@@ -549,6 +561,7 @@ export default function StudentDashboard() {
                 {[
                     { id: 'performance', icon: <Target size={20} />, label: 'Semester' },
                     { id: 'notes', icon: <BookOpen size={20} />, label: 'Notes' },
+                    { id: 'placement', icon: <Briefcase size={20} />, label: 'Placements' },
                     { id: 'analytics', icon: <BarChart3 size={20} />, label: 'Analytics' },
                     { id: 'history', icon: <HistoryIcon size={20} />, label: 'History' },
                     { id: 'simulator', icon: <Gamepad2 size={20} />, label: 'Sim' },
