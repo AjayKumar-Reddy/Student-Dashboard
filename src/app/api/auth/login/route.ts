@@ -16,7 +16,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const normalizedUSN = usn.toUpperCase();
+    const normalizedUSN = usn.trim().toUpperCase();
     const standardizedDob = formatDOB(dob);
 
     // Try to find the student in Postgres
