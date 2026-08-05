@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { verifyToken } from "@/lib/utils/jwt";
 import studentService from "@/lib/services/studentService";
 import { scrapeAndSyncStudent } from "@/lib/services/puppeteerScraper";
+import { decryptText } from "@/lib/utils/crypto";
 
 export async function POST(request: Request) {
   try {
@@ -41,7 +42,7 @@ export async function POST(request: Request) {
 
     // Cooldown check (5 minutes = 300,000ms)
     const COOLDOWN_MS = 5 * 60 * 1000;
-    const detailsBlob = student.details as any;
+    const detailsBlob = (student.details as any) || {};
     const lastSyncStr = detailsBlob?.last_updated;
 
     if (lastSyncStr) {
@@ -49,7 +50,7 @@ export async function POST(request: Request) {
       const now = Date.now();
       const diff = now - lastSync;
 
-      if (diff < COOLDOWN_MS) {
+      if (diff < COOLDOWN_MS && !body.bypassCooldown) {
         const remaining = COOLDOWN_MS - diff;
         return NextResponse.json(
           {
@@ -70,8 +71,28 @@ export async function POST(request: Request) {
       );
     }
 
-    console.log(`[Report Update API] Triggering manual update for ${usn}...`);
-    await scrapeAndSyncStudent(usn, student.dob);
+    // Extract auth credentials (checking top-level model fields & JSON details)
+    const authType = body.authType || (student as any).auth_type || detailsBlob?.auth_type || "Father's Mobile";
+    const encryptedPin = (student as any).encrypted_pin || detailsBlob?.encrypted_pin;
+    
+    let last4Digits = body.last4Digits;
+    if (!last4Digits && encryptedPin) {
+      last4Digits = decryptText(encryptedPin);
+    }
+
+    if (!last4Digits) {
+      return NextResponse.json(
+        {
+          success: false,
+          requiresSecondaryAuth: true,
+          message: "Secondary verification details (PIN) required to re-sync report from college portal."
+        },
+        { status: 400 }
+      );
+    }
+
+    console.log(`[Report Update API] Triggering manual update for ${usn} with secondary auth...`);
+    await scrapeAndSyncStudent(usn, student.dob, authType, last4Digits);
     const dashboardData = await studentService.getStudentDashboard(usn);
 
     return NextResponse.json({
@@ -83,7 +104,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error(`[Update API Error]`, error);
     return NextResponse.json(
-      { success: false, message: "An internal server error occurred while updating data." },
+      { success: false, message: error.message || "An internal server error occurred while updating data." },
       { status: 500 }
     );
   }

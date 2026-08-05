@@ -402,7 +402,14 @@ const parsePlacementProfile = (html: string): Record<string, string> => {
 };
 
 // ---- Scraping Logic ----
-const getCompleteStudentData = async (usn: string, day: string, month: string, year: string) => {
+const getCompleteStudentData = async (
+    usn: string,
+    day: string,
+    month: string,
+    year: string,
+    authType?: string,
+    last4Digits?: string
+) => {
     let browser;
     try {
         const browserlessToken = process.env.BROWSERLESS_TOKEN;
@@ -423,23 +430,103 @@ const getCompleteStudentData = async (usn: string, day: string, month: string, y
         await page.goto("https://parents.msrit.edu/newparents/", { waitUntil: 'domcontentloaded', timeout: 60000 });
 
         await page.type('#username', usn);
-        await page.select('#dd', `${day} `);
+        
+        // Select day robustly regardless of trailing spaces
+        await page.evaluate((dStr) => {
+            const sel = document.getElementById('dd') as HTMLSelectElement;
+            if (sel) {
+                const opt = Array.from(sel.options).find(o => o.value.trim() === dStr.trim());
+                if (opt) {
+                    sel.value = opt.value;
+                    sel.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            }
+        }, day);
+
         await page.select('#mm', month);
         await page.select('#yyyy', year);
         
         await Promise.all([
-            page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 60000 }),
+            page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }).catch(() => {}),
             page.evaluate(() => {
-                const btn = document.querySelector('.cn-login-btn') as HTMLElement;
+                const btn = document.querySelector('.cn-login-btn, input[type="submit"], button[type="submit"]') as HTMLElement;
                 if (btn) btn.click();
             })
         ]);
 
-        const currentUrl = page.url();
-        const content = await page.content();
-        
-        if (!currentUrl.toLowerCase().includes("dashboard") && !content.includes("Logout")) {
-            throw new Error("Login failed or dashboard not loaded");
+        // Explicitly wait for stage 2 elements OR dashboard elements to resolve in DOM
+        await page.waitForSelector('#id-type-select, .digit-input, #enteredid, a[href*="logout"], table', { timeout: 15000 }).catch(() => {});
+
+        let currentUrl = page.url();
+        let content = await page.content();
+        let hasLogout = content.toUpperCase().includes("LOGOUT");
+        let isDashboardUrl = currentUrl.toLowerCase().includes("dashboard") || currentUrl.toLowerCase().includes("ksign");
+
+        // Check if secondary verification form is required (dropdown or digit field present, and not logged in yet)
+        if (!isDashboardUrl && !hasLogout) {
+            console.log("[*] Secondary verification check: not logged in yet. Looking for stage 2 form...");
+            
+            const hasSelect = await page.$('#id-type-select, select[name="idType"]').catch(() => null);
+            const hasDigits = await page.$('.digit-input, #enteredid').catch(() => null);
+
+            if ((hasSelect || hasDigits) && last4Digits) {
+                console.log(`[*] Submitting secondary verification (${authType || 'Default'} / ****)...`);
+                
+                // 1. Select option on #id-type-select
+                if (hasSelect) {
+                    await page.evaluate((targetAuthType) => {
+                        const sel = document.querySelector('#id-type-select, select[name="idType"]') as HTMLSelectElement;
+                        if (sel) {
+                            const cleanTarget = (targetAuthType || '').toLowerCase();
+                            let targetValue = '1'; // Default: Father Mobile
+                            if (cleanTarget.includes('mother') || cleanTarget === '2') {
+                                targetValue = '2';
+                            } else if (cleanTarget.includes('abc') || cleanTarget === '3') {
+                                targetValue = '3';
+                            }
+                            sel.value = targetValue;
+                            sel.dispatchEvent(new Event('change', { bubbles: true }));
+                        }
+                    }, authType || '');
+                }
+
+                // 2. Fill the 4 .digit-input fields and #enteredid
+                await page.evaluate((digits) => {
+                    const inputs = Array.from(document.querySelectorAll('.digit-input')) as HTMLInputElement[];
+                    const cleanDigits = String(digits).replace(/\D/g, '');
+                    
+                    for (let i = 0; i < inputs.length && i < cleanDigits.length; i++) {
+                        inputs[i].value = cleanDigits[i];
+                        inputs[i].dispatchEvent(new Event('input', { bubbles: true }));
+                        inputs[i].dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                    
+                    const hiddenField = document.getElementById('enteredid') as HTMLInputElement;
+                    if (hiddenField) {
+                        hiddenField.value = cleanDigits;
+                    }
+                }, last4Digits);
+
+                // 3. Click submit button #btn-submit
+                await Promise.all([
+                    page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }).catch(() => {}),
+                    page.evaluate(() => {
+                        const btn = document.querySelector('#btn-submit, input[type="submit"], button[type="submit"]') as HTMLElement;
+                        if (btn) btn.click();
+                    })
+                ]);
+
+                await page.waitForSelector('a[href*="logout"], .dash_od_row, table', { timeout: 15000 }).catch(() => {});
+
+                currentUrl = page.url();
+                content = await page.content();
+                hasLogout = content.toUpperCase().includes("LOGOUT");
+                isDashboardUrl = currentUrl.toLowerCase().includes("dashboard") || currentUrl.toLowerCase().includes("ksign");
+            }
+        }
+
+        if (!isDashboardUrl && !hasLogout) {
+            throw new Error("Invalid portal credentials or 4-digit PIN. Please verify your USN, Date of Birth, and PIN.");
         }
 
         const scrapedData: any = { dashboard: content, attendance: {}, cie: {} };
@@ -523,7 +610,7 @@ const getCompleteStudentData = async (usn: string, day: string, month: string, y
 
     } catch (error: any) {
         console.error(`[X] Automation Error: ${error.message}`);
-        return null;
+        throw error;
     } finally {
         if (browser) await (browser as any).close();
     }
@@ -713,11 +800,16 @@ const parseDobParts = (dobString: any) => {
     throw new Error("Invalid DOB format");
 };
 
-export const scrapeAndSyncStudent = async (usn: string, dob: string) => {
+export const scrapeAndSyncStudent = async (
+    usn: string,
+    dob: string,
+    authType?: string,
+    last4Digits?: string
+) => {
     const { day, month, year } = parseDobParts(dob);
     console.log(`[Scraper] Starting scrape for ${usn} with DOB ${day}-${month}-${year}`);
     
-    const scrapedData = await getCompleteStudentData(usn, day, month, year);
+    const scrapedData = await getCompleteStudentData(usn, day, month, year, authType, last4Digits);
     if (!scrapedData) {
         throw new Error(`Failed to scrape data for USN: ${usn}`);
     }
@@ -728,6 +820,8 @@ export const scrapeAndSyncStudent = async (usn: string, dob: string) => {
     if (normalizedData) {
         console.log(`[Scraper] Syncing ${usn} to database...`);
         normalizedData.dob = dob; // Inject dob for the upsert
+        normalizedData.auth_type = authType;
+        normalizedData.last4Digits = last4Digits;
         await syncStudents({ [usn]: normalizedData });
         return normalizedData;
     }
