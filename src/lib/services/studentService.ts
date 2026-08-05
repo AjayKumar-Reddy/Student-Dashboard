@@ -8,7 +8,7 @@ export class StudentService {
    * @param usn Student's University Seat Number
    */
   async getStudentDashboard(usn: string) {
-    const normalizedUsn = usn.toUpperCase();
+    const normalizedUsn = usn.trim().toUpperCase();
 
     const student = await prisma.student.findUnique({
       where: { usn: normalizedUsn },
@@ -38,7 +38,7 @@ export class StudentService {
 
     for (const usn in studentsData) {
       const studentData = studentsData[usn];
-      const normalizedUsn = usn.toUpperCase();
+      const normalizedUsn = usn.trim().toUpperCase();
 
       try {
         // Fetch existing details to preserve credentials if not passed in current sync
@@ -123,7 +123,7 @@ export class StudentService {
   }
 
   async deleteStudent(usn: string) {
-    const normalizedUsn = usn.toUpperCase();
+    const normalizedUsn = usn.trim().toUpperCase();
     await prisma.student.delete({
       where: { usn: normalizedUsn }
     });

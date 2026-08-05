@@ -24,7 +24,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const student = await studentService.getStudentDashboard(payload.usn);
+    const student = await studentService.getStudentDashboard(payload.usn.trim().toUpperCase());
     if (!student) {
       return NextResponse.json(
         { success: false, message: "Student not found" },

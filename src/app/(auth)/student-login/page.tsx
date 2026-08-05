@@ -148,8 +148,9 @@ export default function StudentLogin() {
         const formattedDate = `${formattedDay}-${monthIndex}-${year}`;
 
         try {
+            const cleanUsn = usn.trim().toUpperCase();
             const payload: any = {
-                usn,
+                usn: cleanUsn,
                 dob: formattedDate,
             };
 
@@ -203,7 +204,7 @@ export default function StudentLogin() {
                             type="text"
                             className="input-field"
                             value={usn}
-                            onChange={(e) => setUsn(e.target.value.toUpperCase())}
+                            onChange={(e) => setUsn(e.target.value.toUpperCase().replace(/\s+/g, ""))}
                             placeholder="e.g. 1MS24CS001"
                         />
                     </div>

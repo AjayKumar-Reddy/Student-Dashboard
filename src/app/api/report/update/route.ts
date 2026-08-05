@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const usn = body.usn?.toUpperCase();
+    const usn = body.usn?.trim().toUpperCase();
 
     if (!usn || usn !== payload.usn) {
       return NextResponse.json(
