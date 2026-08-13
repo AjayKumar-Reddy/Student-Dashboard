@@ -92,10 +92,10 @@ export default function StudentLogin() {
     const [month, setMonth] = useState("");
     const [year, setYear] = useState("");
 
-    // Secondary authentication fields
-    const [showSecondaryAuth, setShowSecondaryAuth] = useState(false);
+    // Secondary authentication & Remember Me fields
     const [authType, setAuthType] = useState("Father's Mobile");
     const [last4Digits, setLast4Digits] = useState("");
+    const [rememberMe, setRememberMe] = useState(true);
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -128,15 +128,13 @@ export default function StudentLogin() {
             return;
         }
 
-        if (showSecondaryAuth) {
-            if (!authType) {
-                setError("Please select a verification method");
-                return;
-            }
-            if (!last4Digits || last4Digits.length !== 4) {
-                setError("Please enter the exact last 4 digits");
-                return;
-            }
+        if (!authType) {
+            setError("Please select a verification method");
+            return;
+        }
+        if (!last4Digits || last4Digits.length !== 4) {
+            setError("Please enter the exact 4-digit PIN");
+            return;
         }
 
         setError("");
@@ -152,18 +150,15 @@ export default function StudentLogin() {
             const payload: any = {
                 usn: cleanUsn,
                 dob: formattedDate,
+                authType: authType,
+                last4Digits: last4Digits,
+                rememberMe: rememberMe,
             };
-
-            if (showSecondaryAuth) {
-                payload.authType = authType;
-                payload.last4Digits = last4Digits;
-            }
 
             const response = await axios.post(`${API_BASE_URL}/api/auth/login`, payload);
 
             if (response.data.requiresSecondaryAuth) {
-                setShowSecondaryAuth(true);
-                setInfoMsg("Portal verification required for first-time login. Please select your verification method and enter the last 4 digits.");
+                setInfoMsg(response.data.message || "Verification details required for portal authentication.");
                 setLoading(false);
                 return;
             }
@@ -233,46 +228,44 @@ export default function StudentLogin() {
                         </div>
                     </div>
 
-                    {showSecondaryAuth && (
-                        <div className="secondary-auth-section fade-in">
-                            <div className="secondary-header">
-                                <h3>Portal Verification Required</h3>
-                                <p>Select option and enter the last 4 digits</p>
-                            </div>
-
-                            <div className="form-group">
-                                <label className="form-label">Verification Option</label>
-                                <CustomSelect
-                                    value={authType}
-                                    onChange={setAuthType}
-                                    options={authOptions}
-                                    placeholder="Select Method"
-                                />
-                            </div>
-
-                            <div className="form-group">
-                                <label className="form-label">Last 4 Digits</label>
-                                <input
-                                    type="password"
-                                    maxLength={4}
-                                    className="input-field pin-input"
-                                    value={last4Digits}
-                                    onChange={(e) => setLast4Digits(e.target.value.replace(/\D/g, ""))}
-                                    placeholder="e.g. 1234"
-                                />
-                            </div>
+                    <div className="secondary-auth-section fade-in">
+                        <div className="secondary-header">
+                            <h3>Security Verification</h3>
+                            <p>Select verification option and enter 4-digit PIN</p>
                         </div>
-                    )}
 
-                    {!showSecondaryAuth && (
-                        <button
-                            type="button"
-                            className="toggle-secondary-btn"
-                            onClick={() => setShowSecondaryAuth(true)}
-                        >
-                            First time login or updating portal PIN? Click here
-                        </button>
-                    )}
+                        <div className="form-group">
+                            <label className="form-label">Verification Option</label>
+                            <CustomSelect
+                                value={authType}
+                                onChange={setAuthType}
+                                options={authOptions}
+                                placeholder="Select Method"
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label className="form-label">Last 4 Digits (PIN)</label>
+                            <input
+                                type="password"
+                                maxLength={4}
+                                className="input-field pin-input"
+                                value={last4Digits}
+                                onChange={(e) => setLast4Digits(e.target.value.replace(/\D/g, ""))}
+                                placeholder="e.g. 1234"
+                            />
+                        </div>
+                    </div>
+
+                    <label className="remember-me-container">
+                        <input
+                            type="checkbox"
+                            className="remember-me-checkbox"
+                            checked={rememberMe}
+                            onChange={(e) => setRememberMe(e.target.checked)}
+                        />
+                        <span className="remember-me-label">Remember me on this device</span>
+                    </label>
 
                     {infoMsg && (
                         <div className="form-info">
@@ -386,19 +379,24 @@ export default function StudentLogin() {
                     text-align: center;
                     font-weight: 700;
                 }
-                .toggle-secondary-btn {
-                    background: transparent;
-                    border: none;
-                    color: var(--accent-primary, #3b82f6);
-                    font-size: 0.8rem;
+                .remember-me-container {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    margin-top: 4px;
                     cursor: pointer;
-                    text-decoration: underline;
-                    padding: 4px 0;
-                    text-align: center;
-                    transition: opacity 0.2s ease;
+                    user-select: none;
                 }
-                .toggle-secondary-btn:hover {
-                    opacity: 0.85;
+                .remember-me-checkbox {
+                    accent-color: var(--accent-primary, #3b82f6);
+                    width: 16px;
+                    height: 16px;
+                    cursor: pointer;
+                    border-radius: 4px;
+                }
+                .remember-me-label {
+                    font-size: 0.85rem;
+                    color: var(--text-secondary);
                 }
                 .login-footer {
                     margin-top: 24px;

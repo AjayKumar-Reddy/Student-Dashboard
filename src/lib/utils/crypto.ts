@@ -44,3 +44,52 @@ export function decryptText(encryptedHash: string): string {
     return '';
   }
 }
+
+/**
+ * Decrypts a field string if it is encrypted in 'iv:authTag:ciphertext' format.
+ * Returns the plain string as-is if it's not encrypted (for backward compatibility).
+ */
+export function decryptField(val: string | null | undefined): string {
+  if (!val) return '';
+  if (typeof val === 'string' && val.includes(':') && val.split(':').length === 3) {
+    const decrypted = decryptText(val);
+    if (decrypted) return decrypted;
+  }
+  return val;
+}
+
+/**
+ * Encrypts an arbitrary JSON object/data structure into an AES-256-GCM encrypted wrapper object.
+ */
+export function encryptJSON(data: any): { _encrypted: string } {
+  if (data === null || data === undefined) return { _encrypted: '' };
+  try {
+    const jsonString = JSON.stringify(data);
+    return { _encrypted: encryptText(jsonString) };
+  } catch (err) {
+    console.error('[Crypto] JSON encryption failed:', err);
+    return { _encrypted: '' };
+  }
+}
+
+/**
+ * Decrypts an encrypted JSON wrapper object back into its original TypeScript data structure.
+ * Falls back to returning raw data if it is not encrypted.
+ */
+export function decryptJSON<T = any>(encryptedObj: any): T {
+  if (!encryptedObj) return {} as T;
+  if (typeof encryptedObj === 'object' && encryptedObj !== null && '_encrypted' in encryptedObj) {
+    const cipherText = encryptedObj._encrypted;
+    if (!cipherText) return {} as T;
+    const decryptedText = decryptText(cipherText);
+    if (!decryptedText) return {} as T;
+    try {
+      return JSON.parse(decryptedText);
+    } catch {
+      return {} as T;
+    }
+  }
+  // Backward compatibility for unencrypted legacy JSON fields
+  return encryptedObj as T;
+}
+
