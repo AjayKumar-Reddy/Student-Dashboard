@@ -32,6 +32,7 @@ export const UpdateButton: React.FC<UpdateButtonProps> = ({
 
   return (
     <button 
+      data-tour="update-btn"
       className={`update-dashboard-btn ${showGlow ? 'glow-cta' : ''} ${cooldownActive ? 'cooldown' : ''}`}
       onClick={handleClick}
       onMouseEnter={() => setIsHovered(true)}

@@ -12,9 +12,10 @@ interface SidebarProfileProps {
   } | null;
   onLogout: () => void;
   onDeleteData?: () => void;
+  onStartTour?: () => void;
 }
 
-const SidebarProfile: React.FC<SidebarProfileProps> = ({ user, onLogout, onDeleteData }) => {
+const SidebarProfile: React.FC<SidebarProfileProps> = ({ user, onLogout, onDeleteData, onStartTour }) => {
   if (!user) {
     return (
       <div className="sidebar-profile-skeleton">
@@ -38,7 +39,7 @@ const SidebarProfile: React.FC<SidebarProfileProps> = ({ user, onLogout, onDelet
     : "ST";
 
   return (
-    <div className="sidebar-profile-section">
+    <div className="sidebar-profile-section" data-tour="sidebar-profile">
       <div className="profile-card">
         <div className="profile-image-container">
           {user.profileImage ? (
@@ -63,13 +64,39 @@ const SidebarProfile: React.FC<SidebarProfileProps> = ({ user, onLogout, onDelet
           <span className="profile-name" title={user.name}>
             {user.name}
           </span>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", marginTop: "4px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", marginTop: "4px", gap: "6px", flexWrap: "wrap" }}>
             <button onClick={onLogout} className="profile-logout-link" title="Logout">
               <LogOut size={12} />
               <span>Logout</span>
             </button>
+
+            {onStartTour && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onStartTour();
+                }}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "var(--accent-primary, #00ADB5)",
+                  fontSize: "10px",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                  padding: "4px 0",
+                  textDecoration: "underline",
+                  transition: "opacity 0.2s"
+                }}
+                title="Replay onboarding tour"
+              >
+                Replay Tour
+              </button>
+            )}
+
             {onDeleteData && (
               <button 
+                data-tour="delete-account"
                 onClick={onDeleteData} 
                 style={{
                   background: "transparent",

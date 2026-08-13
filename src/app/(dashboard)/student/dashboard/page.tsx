@@ -25,6 +25,7 @@ import NotesSection from "@/components/dashboard/sections/NotesSection";
 import LoadingScreen from "@/components/dashboard/LoadingScreen";
 import BirthdayBanner from "@/components/dashboard/BirthdayBanner";
 import PlacementSection from "@/components/dashboard/sections/PlacementSection";
+import OnboardingTour from "@/components/dashboard/OnboardingTour";
 
 
 const GRADE_COLORS: Record<string, string> = {
@@ -71,8 +72,21 @@ export default function StudentDashboard() {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [confirmUsnInput, setConfirmUsnInput] = useState("");
+    const [showTour, setShowTour] = useState(false);
 
     const { formatTime, isCooldownActive } = useCooldown(nextAllowedAt);
+
+    // Auto-trigger Onboarding Tour for first-time students
+    useEffect(() => {
+        if (!loading && student) {
+            const tourKey = student.usn ? `hasCompletedOnboardingTour_${student.usn}` : "hasCompletedOnboardingTour";
+            const hasCompleted = localStorage.getItem(tourKey);
+            if (!hasCompleted) {
+                const timer = setTimeout(() => setShowTour(true), 600);
+                return () => clearTimeout(timer);
+            }
+        }
+    }, [loading, student]);
 
     // 2. Lifecycle
     useEffect(() => {
@@ -419,7 +433,7 @@ export default function StudentDashboard() {
                         </button>
                     )}
                 </nav>
-                <SidebarProfile user={student} onLogout={handleLogout} onDeleteData={() => setShowDeleteModal(true)} />
+                <SidebarProfile user={student} onLogout={handleLogout} onDeleteData={() => setShowDeleteModal(true)} onStartTour={() => setShowTour(true)} />
             </aside>
 
             {/* Mobile Top Navbar */}
@@ -456,6 +470,30 @@ export default function StudentDashboard() {
                                 <div style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--text-primary)' }}>{student?.name}</div>
                                 <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{student?.usn}</div>
                             </div>
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowMobileProfileMenu(false);
+                                    setShowTour(true);
+                                }}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    width: '100%',
+                                    padding: '8px 10px',
+                                    background: 'rgba(0, 173, 181, 0.1)',
+                                    color: '#00ADB5',
+                                    border: '1px solid rgba(0, 173, 181, 0.2)',
+                                    borderRadius: '8px',
+                                    fontSize: '13px',
+                                    fontWeight: 600,
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Replay Tour
+                            </button>
                             {isInstallable && (
                                 <button 
                                     onClick={handleInstallPWA}
@@ -767,6 +805,9 @@ export default function StudentDashboard() {
                     </div>
                 </div>
             )}
+
+            {/* Interactive Onboarding Tour */}
+            <OnboardingTour isOpen={showTour} onClose={() => setShowTour(false)} />
         </div>
     );
 }

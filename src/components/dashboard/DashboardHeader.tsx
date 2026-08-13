@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { ShieldCheck } from "lucide-react";
 
 interface DashboardHeaderProps {
   name?: string;
@@ -22,13 +23,37 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   return (
     <header className="dashboard-header-container">
       {/* Primary Welcome Block */}
-      <div className="welcome-block">
-        <h1 className="welcome-title">
-          Welcome back, <span className="highlight-name">{displayName}</span>
-        </h1>
-        <p className="welcome-tagline">
-          Here’s your current semester performance overview
-        </p>
+      <div className="welcome-block" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
+        <div>
+          <h1 className="welcome-title">
+            Welcome back, <span className="highlight-name">{displayName}</span>
+          </h1>
+          <p className="welcome-tagline">
+            Here’s your current semester performance overview
+          </p>
+        </div>
+
+        {/* Security & Database Encryption Trust Badge */}
+        <div 
+          data-tour="security-badge"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "6px",
+            background: "rgba(16, 185, 129, 0.1)",
+            border: "1px solid rgba(16, 185, 129, 0.25)",
+            color: "#10b981",
+            padding: "6px 12px",
+            borderRadius: "20px",
+            fontSize: "0.75rem",
+            fontWeight: "700",
+            letterSpacing: "0.02em"
+          }}
+          title="Data is end-to-end encrypted in database"
+        >
+          <ShieldCheck size={14} />
+          <span>Encrypted Database</span>
+        </div>
       </div>
 
       {/* Primary Divider (Moved Up) */}
