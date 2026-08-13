@@ -1329,8 +1329,8 @@ p {
 
 .glass-card:hover {
   background: var(--glass-bg-hover, rgba(24, 34, 53, 0.78)) !important;
-  border-color: var(--glass-border-glow, rgba(0, 173, 181, 0.35)) !important;
-  box-shadow: 0 16px 40px 0 rgba(0, 173, 181, 0.15), 0 0 1px 1px rgba(0, 173, 181, 0.2);
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5) !important;
 }
 
 .glass-panel {

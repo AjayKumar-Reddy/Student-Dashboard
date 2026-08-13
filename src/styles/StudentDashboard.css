@@ -323,8 +323,8 @@
 
 .stat-card:hover {
     background: var(--glass-bg-hover, rgba(24, 34, 53, 0.78));
-    border-color: var(--glass-border-glow, rgba(0, 173, 181, 0.35));
-    box-shadow: 0 16px 40px 0 rgba(0, 173, 181, 0.15), 0 0 1px 1px rgba(0, 173, 181, 0.2);
+    border-color: rgba(255, 255, 255, 0.16);
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);
     transform: translateY(-2px);
 }
 
@@ -473,8 +473,8 @@
 
 .chart-card:hover {
     background: var(--glass-bg-hover, rgba(24, 34, 53, 0.78));
-    border-color: var(--glass-border-glow, rgba(0, 173, 181, 0.35));
-    box-shadow: 0 16px 40px 0 rgba(0, 173, 181, 0.15);
+    border-color: rgba(255, 255, 255, 0.16);
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);
 }
 
 .chart-header {

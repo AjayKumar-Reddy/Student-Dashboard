@@ -206,7 +206,9 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ isOpen, onClose 
       {spotlightRect ? (
         <>
           {/* Top Panel */}
-          <div
+          <button
+            type="button"
+            aria-label="Next tour step"
             onClick={handleNext}
             className="spotlight-panel"
             style={{
@@ -217,7 +219,9 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ isOpen, onClose 
             }}
           />
           {/* Bottom Panel */}
-          <div
+          <button
+            type="button"
+            aria-label="Next tour step"
             onClick={handleNext}
             className="spotlight-panel"
             style={{
@@ -228,7 +232,9 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ isOpen, onClose 
             }}
           />
           {/* Left Panel */}
-          <div
+          <button
+            type="button"
+            aria-label="Next tour step"
             onClick={handleNext}
             className="spotlight-panel"
             style={{
@@ -239,7 +245,9 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ isOpen, onClose 
             }}
           />
           {/* Right Panel */}
-          <div
+          <button
+            type="button"
+            aria-label="Next tour step"
             onClick={handleNext}
             className="spotlight-panel"
             style={{
@@ -251,7 +259,9 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ isOpen, onClose 
           />
         </>
       ) : (
-        <div
+        <button
+          type="button"
+          aria-label="Next tour step"
           onClick={handleNext}
           className="spotlight-panel"
           style={{ inset: 0, width: "100vw", height: "100vh" }}
@@ -278,7 +288,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ isOpen, onClose 
             <Sparkles size={12} className="sparkle-icon" />
             <span>Step {currentStepIdx + 1} of {TOUR_STEPS.length}</span>
           </div>
-          <button onClick={handleComplete} className="tour-close-btn" title="Skip tour">
+          <button type="button" onClick={handleComplete} className="tour-close-btn" title="Skip tour">
             <X size={15} />
           </button>
         </div>
@@ -297,9 +307,11 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ isOpen, onClose 
         {/* Progress Dots & Action Controls */}
         <div className="tour-card-footer">
           <div className="tour-progress-bar">
-            {TOUR_STEPS.map((_, idx) => (
-              <div
-                key={idx}
+            {TOUR_STEPS.map((stepItem, idx) => (
+              <button
+                type="button"
+                key={stepItem.title}
+                aria-label={`Go to tour step ${idx + 1}`}
                 className={`tour-dot ${idx === currentStepIdx ? "active" : ""} ${idx < currentStepIdx ? "completed" : ""}`}
                 onClick={() => setCurrentStepIdx(idx)}
               />
@@ -308,11 +320,11 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ isOpen, onClose 
 
           <div className="tour-nav-btns">
             {!isFirstStep && (
-              <button onClick={handleBack} className="tour-btn tour-back-btn">
+              <button type="button" onClick={handleBack} className="tour-btn tour-back-btn">
                 <ArrowLeft size={13} /> Back
               </button>
             )}
-            <button onClick={handleNext} className="tour-btn tour-next-btn">
+            <button type="button" onClick={handleNext} className="tour-btn tour-next-btn">
               {isLastStep ? "Done" : "Next"} {!isLastStep && <ArrowRight size={13} />}
             </button>
           </div>
