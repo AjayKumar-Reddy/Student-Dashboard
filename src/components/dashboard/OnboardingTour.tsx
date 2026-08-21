@@ -138,10 +138,10 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ isOpen, onClose 
 
     // Horizontally center card on all mobile screen sizes
     const mobileLeft = Math.max(12, (window.innerWidth - cardWidth) / 2);
+    const mobileTop = Math.max(20, (window.innerHeight - estimatedCardHeight) / 2);
 
-    // Specially center Step 1 pop-up in middle of screen ONLY on mobile
-    if (isMobile && currentStepIdx === 0) {
-      const mobileTop = Math.max(20, (window.innerHeight - estimatedCardHeight) / 2);
+    // Specially center Step 1 pop-up OR any step when target element is not on current page in middle of screen on mobile
+    if (isMobile && (currentStepIdx === 0 || !spotlightRect)) {
       return {
         position: "fixed",
         top: `${mobileTop}px`,
@@ -155,15 +155,17 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ isOpen, onClose 
     }
 
     if (!spotlightRect) {
+      const desktopLeft = Math.max(20, (window.innerWidth - cardWidth) / 2);
+      const desktopTop = Math.max(20, (window.innerHeight - estimatedCardHeight) / 2);
       return {
         position: "fixed",
-        top: isMobile ? "50%" : "20%",
-        left: "50%",
+        top: `${desktopTop}px`,
+        left: `${desktopLeft}px`,
         width: `${cardWidth}px`,
-        transform: "translate(-50%, -50%)",
         margin: 0,
         zIndex: 10001,
         pointerEvents: "auto",
+        transition: "all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
       };
     }
 
