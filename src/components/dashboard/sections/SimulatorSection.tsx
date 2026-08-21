@@ -194,7 +194,7 @@ const SimulatorSection: React.FC<SimulatorSectionProps> = ({
                                                     <div className="subj-pickers">
                                                         <select 
                                                             value={simulatedCredits[subj.code] ?? 4} 
-                                                            onChange={(e) => setSimulatedCredits({...simulatedCredits, [subj.code]: parseInt(e.target.value)})}
+                                                            onChange={(e) => setSimulatedCredits({...simulatedCredits, [subj.code]: Number.parseInt(e.target.value, 10)})}
                                                             className="simulator-select credit-select"
                                                         >
                                                             {[0,1,2,3,4,5].map(c => <option key={c} value={c}>{c}</option>)}

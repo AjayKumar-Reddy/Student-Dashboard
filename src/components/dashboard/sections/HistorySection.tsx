@@ -52,7 +52,7 @@ const HistorySection: React.FC<HistorySectionProps> = ({
                         id="sem-select"
                         className="sem-history-select" 
                         value={selectedHistoryIdx}
-                        onChange={(e) => setSelectedHistoryIdx(parseInt(e.target.value))}
+                        onChange={(e) => setSelectedHistoryIdx(Number.parseInt(e.target.value, 10))}
                         style={{
                             width: '100%',
                             padding: '12px',
@@ -68,7 +68,7 @@ const HistorySection: React.FC<HistorySectionProps> = ({
                         {reversedHistory.map((sem: any, idx: number) => {
                             const semNum = isLateralEntry ? (examHistory.length - idx + 2) : (examHistory.length - idx);
                             return (
-                                <option key={idx} value={idx}>
+                                <option key={sem.semester || idx} value={idx}>
                                     Semester {semNum} (SGPA: {sem.sgpa})
                                 </option>
                             );
@@ -78,7 +78,7 @@ const HistorySection: React.FC<HistorySectionProps> = ({
 
                 <div className="history-grid">
                     {reversedHistory.map((sem: any, idx: number) => (
-                        <div key={idx} className={`chart-card history-card ${selectedHistoryIdx === idx ? 'mobile-show' : 'mobile-hide'}`}>
+                        <div key={sem.semester || idx} className={`chart-card history-card ${selectedHistoryIdx === idx ? 'mobile-show' : 'mobile-hide'}`}>
                             <div className="chart-header" style={{ borderBottom: '1px solid var(--border-subtle)', paddingBottom: '16px', marginBottom: '16px', display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
                                 <div>
                                     <span className="pill" style={{ marginBottom: '8px', display: 'inline-block' }}>Semester {isLateralEntry ? (examHistory.length - idx + 2) : (examHistory.length - idx)}</span>
@@ -94,7 +94,7 @@ const HistorySection: React.FC<HistorySectionProps> = ({
                                     <thead><tr><th>Code</th><th>Course</th><th style={{ textAlign: 'right' }}>Grade</th></tr></thead>
                                     <tbody>
                                         {sem.courses?.map((c: any, i: number) => (
-                                            <tr key={i}>
+                                            <tr key={c.code || c.name || i}>
                                                 <td style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{c.code}</td>
                                                 <td style={{ fontSize: '13px' }}>{c.name}</td>
                                                 <td style={{ textAlign: 'right', fontWeight: 'bold', color: GRADE_COLORS[c.grade] || 'var(--text-primary)' }}>{c.grade}</td>

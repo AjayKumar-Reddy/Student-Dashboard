@@ -34,110 +34,87 @@ const parseDate = (str: string): Date | null => {
     if (!str) return null;
     const cleaned = str.replace(/-/g, "/").trim();
     const parts = cleaned.split("/");
-    if (parts.length === 3) {
-        if (parts[2].length === 4) {
-            const day = parseInt(parts[0], 10);
-            const month = parseInt(parts[1], 10) - 1;
-            const year = parseInt(parts[2], 10);
-            return new Date(year, month, day);
-        }
+    if (parts.length === 3 && parts[2].length === 4) {
+        const day = Number.parseInt(parts[0], 10);
+        const month = Number.parseInt(parts[1], 10) - 1;
+        const year = Number.parseInt(parts[2], 10);
+        return new Date(year, month, day);
     }
     const d = new Date(str);
-    return isNaN(d.getTime()) ? null : d;
+    return Number.isNaN(d.getTime()) ? null : d;
 };
 
 // Calculate relative counters like (3 days ago) or (19 days left)
 const getRelativeDateString = (dateStr: string | null): { text: string; color: string } | null => {
     if (!dateStr) return null;
-    try {
-        const d = parseDate(dateStr);
-        if (!d) return null;
-        const now = new Date();
-        now.setHours(0, 0, 0, 0);
-        d.setHours(0, 0, 0, 0);
-        
-        const diffTime = d.getTime() - now.getTime();
-        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-        
-        if (diffDays === 0) {
-            return { text: "(Today)", color: "var(--accent-primary, #00ADB5)" };
-        } else if (diffDays < 0) {
-            const absDays = Math.abs(diffDays);
-            if (absDays === 1) return { text: "(1 day ago)", color: "#10b981" };
-            return { text: `(${absDays} days ago)`, color: "#10b981" };
-        } else {
-            if (diffDays === 1) return { text: "(1 day left)", color: "#ef4444" };
-            return { text: `(${diffDays} days left)`, color: "#ef4444" };
-        }
-    } catch (e) {
-        return null;
+    const d = parseDate(dateStr);
+    if (!d) return null;
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    d.setHours(0, 0, 0, 0);
+    
+    const diffTime = d.getTime() - now.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) {
+        return { text: "(Today)", color: "var(--accent-primary, #00ADB5)" };
     }
+    if (diffDays < 0) {
+        const absDays = Math.abs(diffDays);
+        return { text: absDays === 1 ? "(1 day ago)" : `(${absDays} days ago)`, color: "#10b981" };
+    }
+    return { text: diffDays === 1 ? "(1 day left)" : `(${diffDays} days left)`, color: "#ef4444" };
+};
+
+const extractCompanyAndType = (title: string, text: string) => {
+    const typeMatch = title.match(/^([^(]+)\(([^)]+)\)/);
+    if (typeMatch) {
+        return { company: typeMatch[1].trim(), type: typeMatch[2].trim() };
+    }
+    const typeLook = text.match(/\b(Service|Product|Core|Direct|Internship)\b/i);
+    return { company: title, type: typeLook ? typeLook[0] : "Placement Event" };
+};
+
+const extractDateByPattern = (text: string, pattern: RegExp): string | null => {
+    const match = text.match(pattern);
+    if (!match) return null;
+    const rawDate = match[1].trim();
+    const dateOnlyMatch = rawDate.match(/\b\d{1,2}[-/\s]\d{1,2}[-/\s]\d{4}\b/);
+    return dateOnlyMatch ? dateOnlyMatch[0] : rawDate.split(/(?:\s{2,}|,|\.|\()/)[0].trim();
+};
+
+const extractCtc = (text: string): string | null => {
+    const ctcMatch = text.match(/(?:CTC[:\s]+)?₹?\s*\d+(?:\.\d+)?\s*(?:LPA|Lakhs|L)\b/i);
+    if (!ctcMatch) return null;
+    let ctc = ctcMatch[0].replace(/CTC[:\s]+/i, "").trim();
+    return ctc.startsWith("₹") ? ctc : `₹${ctc}`;
+};
+
+const extractStatus = (text: string): string => {
+    const statusMatch = text.match(/(?:Status)[:\s]+([a-zA-Z\s]+)/i);
+    if (statusMatch) return statusMatch[1].trim();
+    if (/under\s*progress/i.test(text)) return "Under Progress";
+    if (/registered/i.test(text)) return "Registered";
+    if (/eligible/i.test(text)) return "Eligible";
+    if (/applied/i.test(text)) return "Applied";
+    if (/selected/i.test(text)) return "Selected";
+    if (/rejected/i.test(text)) return "Rejected";
+    return "Open";
 };
 
 // Parser to extract fields from unstructured Contineo scrapings
 const parseEventData = (event: any): ParsedEvent => {
     const title = event.title || "";
-    let company = title;
-    let type = "Placement Event";
-    
-    const typeMatch = title.match(/^([^(]+)\(([^)]+)\)/);
-    if (typeMatch) {
-        company = typeMatch[1].trim();
-        type = typeMatch[2].trim();
-    } else {
-        const text = event.textContent || "";
-        const typeLook = text.match(/\b(Service|Product|Core|Direct|Internship)\b/i);
-        if (typeLook) {
-            type = typeLook[0];
-        }
-    }
-
-    let appliedDate: string | null = null;
-    let eventDate: string | null = null;
-    let ctc: string | null = null;
-    let status = "Open";
-
     const allText = [event.title, event.textContent, ...(event.details || [])].join(" ");
-
-    const appliedMatch = allText.match(/(?:Applied\s+On|Applied\s+Date|Applied|Apply\s+Before)[:\s]+([0-9a-zA-Z\s\-/: ]+)/i);
-    if (appliedMatch) {
-        const rawDate = appliedMatch[1].trim();
-        const dateOnlyMatch = rawDate.match(/\b\d{1,2}[-/\s]\d{1,2}[-/\s]\d{4}\b/);
-        appliedDate = dateOnlyMatch ? dateOnlyMatch[0] : rawDate.split(/(?:\s{2,}|,|\.|\()/)[0].trim();
-    }
-
-    const eventDateMatch = allText.match(/(?:Event\s+Date|Date\s+of\s+Event|Event)[:\s]+([0-9a-zA-Z\s\-/: ]+)/i);
-    if (eventDateMatch) {
-        const rawDate = eventDateMatch[1].trim();
-        const dateOnlyMatch = rawDate.match(/\b\d{1,2}[-/\s]\d{1,2}[-/\s]\d{4}\b/);
-        eventDate = dateOnlyMatch ? dateOnlyMatch[0] : rawDate.split(/(?:\s{2,}|,|\.|\()/)[0].trim();
-    }
-
-    const ctcMatch = allText.match(/(?:₹?\s*\d+(?:\.\d+)?\s*(?:LPA|Lakhs|L)|CTC[:\s]+₹?\s*\d+(?:\.\d+)?\s*(?:LPA|Lakhs|L))/i);
-    if (ctcMatch) {
-        ctc = ctcMatch[0].replace(/CTC[:\s]+/i, "").trim();
-        if (!ctc.startsWith("₹")) ctc = "₹" + ctc;
-    }
-
-    const statusMatch = allText.match(/(?:Status)[:\s]+([a-zA-Z\s]+)/i);
-    if (statusMatch) {
-        status = statusMatch[1].trim();
-    } else {
-        if (/under\s*progress/i.test(allText)) status = "Under Progress";
-        else if (/registered/i.test(allText)) status = "Registered";
-        else if (/eligible/i.test(allText)) status = "Eligible";
-        else if (/applied/i.test(allText)) status = "Applied";
-        else if (/selected/i.test(allText)) status = "Selected";
-        else if (/rejected/i.test(allText)) status = "Rejected";
-    }
+    const { company, type } = extractCompanyAndType(title, event.textContent || "");
 
     return {
         company,
         type,
-        appliedDate,
-        eventDate,
-        ctc,
-        status,
+        appliedDate: extractDateByPattern(allText, /(?:Applied\s+On|Applied\s+Date|Applied|Apply\s+Before)[:\s]+([a-zA-Z0-9\s/:-]+)/i),
+        eventDate: extractDateByPattern(allText, /(?:Event\s+Date|Date\s+of\s+Event|Event)[:\s]+([a-zA-Z0-9\s/:-]+)/i),
+        ctc: extractCtc(allText),
+        status: extractStatus(allText),
         actionLink: event.actionLink,
         raw: event
     };
@@ -409,7 +386,7 @@ const PlacementSection: React.FC<PlacementSectionProps> = ({
                         <div style={{ flex: 1, minWidth: 0, position: "relative" }}>
                             <select
                                 value={selectedEventIndex}
-                                onChange={(e) => setSelectedEventIndex(parseInt(e.target.value, 10))}
+                                onChange={(e) => setSelectedEventIndex(Number.parseInt(e.target.value, 10))}
                                 style={{
                                     width: "100%",
                                     padding: "10px 14px",

@@ -87,7 +87,7 @@ const NotesSection: React.FC<NotesSectionProps> = ({
                         <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 500 }}>Semester:</span>
                         <select 
                             value={selectedSem} 
-                            onChange={(e) => setSelectedSem(parseInt(e.target.value))}
+                            onChange={(e) => setSelectedSem(Number.parseInt(e.target.value, 10))}
                             style={{ 
                                 padding: '8px 12px', 
                                 background: 'var(--bg-secondary)', 

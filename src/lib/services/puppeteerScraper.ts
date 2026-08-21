@@ -28,12 +28,12 @@ class DataNormalizer {
 
     static isValidNumeric(val: any): boolean {
         if (val === null || val === undefined) return false;
-        if (typeof val === 'number') return !isNaN(val);
+        if (typeof val === 'number') return !Number.isNaN(val);
         if (typeof val === 'string') {
             const cleanVal = val.trim();
             if (cleanVal === "" || cleanVal === "-" || cleanVal === " - ") return false;
             const parsed = parseFloat(cleanVal);
-            return !isNaN(parsed);
+            return !Number.isNaN(parsed);
         }
         return false;
     }
@@ -48,9 +48,9 @@ class DataNormalizer {
             
             // Attendance Object
             const attDetails = entry.attendance_details || {};
-            const present = parseInt(attDetails.present_classes || 0, 10);
-            const absent = parseInt(attDetails.absent_classes || 0, 10);
-            const remaining = parseInt(attDetails.still_to_go || 0, 10);
+            const present = Number.parseInt(attDetails.present_classes || 0, 10);
+            const absent = Number.parseInt(attDetails.absent_classes || 0, 10);
+            const remaining = Number.parseInt(attDetails.still_to_go || 0, 10);
             
             const classesDetails = attDetails.classes || {};
             const presentDates = classesDetails.present_dates || [];
@@ -97,7 +97,7 @@ class DataNormalizer {
                 const a = assessments.find(x => x.type === tType);
                 if (a) {
                     const val = parseFloat(a.obtained_marks);
-                    return !isNaN(val) ? val : 0.0;
+                    return !Number.isNaN(val) ? val : 0.0;
                 }
                 return 0.0;
             };
@@ -141,7 +141,7 @@ class DataNormalizer {
         if (!classDetails || typeof classDetails !== "string") return 0;
         const m = classDetails.match(/\bSEM\s*0*(\d+)\b/i);
         if (!m) return 0;
-        const sem = parseInt(m[1], 10);
+        const sem = Number.parseInt(m[1], 10);
         if (Number.isNaN(sem) || sem <= 0) return 0;
         return Math.ceil(sem / 2);
     }
@@ -462,6 +462,182 @@ const sharedHttpsAgent = new https.Agent({
 });
 
 // ---- Scraping Logic ----
+async function performPortalLogin(
+    page: any,
+    usn: string,
+    day: string,
+    month: string,
+    year: string,
+    authType?: string,
+    last4Digits?: string
+) {
+    await page.goto("https://parents.msrit.edu/newparents/", { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await page.type('#username', usn);
+    
+    // Select day robustly regardless of trailing spaces
+    await page.evaluate((dStr: string) => {
+        const sel = document.getElementById('dd') as HTMLSelectElement;
+        if (sel) {
+            const opt = Array.from(sel.options).find(o => o.value.trim() === dStr.trim());
+            if (opt) {
+                sel.value = opt.value;
+                sel.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
+    }, day);
+
+    await page.select('#mm', month);
+    await page.select('#yyyy', year);
+    
+    await Promise.all([
+        page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => {}),
+        page.evaluate(() => {
+            const btn = document.querySelector('.cn-login-btn, input[type="submit"], button[type="submit"]') as HTMLElement;
+            if (btn) btn.click();
+        })
+    ]);
+
+    // Explicitly wait for stage 2 elements OR dashboard elements to resolve in DOM
+    await page.waitForSelector('#id-type-select, .digit-input, #enteredid, a[href*="logout"], table', { timeout: 8000 }).catch(() => {});
+
+    let currentUrl = page.url();
+    let content = await page.content();
+    let hasLogout = content.toUpperCase().includes("LOGOUT");
+    let isDashboardUrl = currentUrl.toLowerCase().includes("dashboard") || currentUrl.toLowerCase().includes("ksign");
+
+    // Check if secondary verification form is required
+    if (!isDashboardUrl && !hasLogout) {
+        const hasSelect = await page.$('#id-type-select, select[name="idType"]').catch(() => null);
+        const hasDigits = await page.$('.digit-input, #enteredid').catch(() => null);
+
+        if ((hasSelect || hasDigits) && last4Digits) {
+            if (hasSelect) {
+                await page.evaluate((targetAuthType: string) => {
+                    const sel = document.querySelector('#id-type-select, select[name="idType"]') as HTMLSelectElement;
+                    if (sel) {
+                        const cleanTarget = (targetAuthType || '').toLowerCase();
+                        let targetValue = '1';
+                        if (cleanTarget.includes('mother') || cleanTarget === '2') {
+                            targetValue = '2';
+                        } else if (cleanTarget.includes('abc') || cleanTarget === '3') {
+                            targetValue = '3';
+                        }
+                        sel.value = targetValue;
+                        sel.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                }, authType || '');
+            }
+
+            await page.evaluate((digits: string) => {
+                const inputs = Array.from(document.querySelectorAll('.digit-input')) as HTMLInputElement[];
+                const cleanDigits = String(digits).replace(/\D/g, '');
+                
+                for (let i = 0; i < inputs.length && i < cleanDigits.length; i++) {
+                    inputs[i].value = cleanDigits[i];
+                    inputs[i].dispatchEvent(new Event('input', { bubbles: true }));
+                    inputs[i].dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                
+                const hiddenField = document.getElementById('enteredid') as HTMLInputElement;
+                if (hiddenField) {
+                    hiddenField.value = cleanDigits;
+                }
+            }, last4Digits);
+
+            await Promise.all([
+                page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => {}),
+                page.evaluate(() => {
+                    const btn = document.querySelector('#btn-submit, input[type="submit"], button[type="submit"]') as HTMLElement;
+                    if (btn) btn.click();
+                })
+            ]);
+
+            await page.waitForSelector('a[href*="logout"], .dash_od_row, table', { timeout: 8000 }).catch(() => {});
+
+            currentUrl = page.url();
+            content = await page.content();
+            hasLogout = content.toUpperCase().includes("LOGOUT");
+            isDashboardUrl = currentUrl.toLowerCase().includes("dashboard") || currentUrl.toLowerCase().includes("ksign");
+        }
+    }
+
+    if (!isDashboardUrl && !hasLogout) {
+        throw new Error("Invalid portal credentials or 4-digit PIN. Please verify your USN, Date of Birth, and PIN.");
+    }
+
+    return content;
+}
+
+async function fetchSubPagesInParallel(cookieString: string, content: string) {
+    const scrapedData: any = { dashboard: content, attendance: {}, cie: {} };
+    const $dash = cheerio.load(content);
+    const courseRows = extractCourseRowsFromDashboard($dash);
+
+    const urlToTargets = new Map<string, any[]>();
+    const pushTarget = (href: string, courseCode: string, type: string) => {
+        const url = resolveParentsUrl(href);
+        if (!url) return;
+        if (!urlToTargets.has(url)) urlToTargets.set(url, []);
+        urlToTargets.get(url)?.push({ courseCode, type });
+    };
+
+    for (const row of courseRows) {
+        if (row.attLink) pushTarget(row.attLink, row.code, "attendance");
+        if (row.cieLink) pushTarget(row.cieLink, row.code, "cie");
+    }
+
+    const examsUrl = "https://parents.msrit.edu/newparents/index.php?option=com_history&task=getResult";
+    urlToTargets.set(examsUrl, [{ courseCode: "EXAMS", type: "exams" }]);
+
+    const placementEligibilityUrl = "https://parents.msrit.edu/newparents/index.php?option=com_placement&controller=placement&task=placementeligibility";
+    const placementStatusUrl = "https://parents.msrit.edu/newparents/index.php?option=com_placement&controller=placement&task=placementstatus";
+    const placementResultsUrl = "https://parents.msrit.edu/newparents/index.php?option=com_placement&controller=placement&task=placementresults";
+    const placementProfileUrl = "https://parents.msrit.edu/newparents/index.php?option=com_placement&controller=placement&task=getBasicprofiledetails";
+
+    urlToTargets.set(placementEligibilityUrl, [{ courseCode: "PLACEMENT", type: "placement_eligibility" }]);
+    urlToTargets.set(placementStatusUrl, [{ courseCode: "PLACEMENT", type: "placement_status" }]);
+    urlToTargets.set(placementResultsUrl, [{ courseCode: "PLACEMENT", type: "placement_results" }]);
+    urlToTargets.set(placementProfileUrl, [{ courseCode: "PLACEMENT", type: "placement_profile" }]);
+
+    const axiosInstance = axios.create({
+        timeout: 10000,
+        headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+            'Cookie': cookieString
+        },
+        httpsAgent: sharedHttpsAgent
+    });
+
+    const uniqueUrls = [...urlToTargets.keys()];
+    const fetchPromises = uniqueUrls.map(async (url) => {
+        try {
+            const resp = await axiosInstance.get(url);
+            return { url, html: resp.data };
+        } catch {
+            return { url, html: "" };
+        }
+    });
+
+    const fetched = await Promise.all(fetchPromises);
+    const htmlByUrl = new Map(fetched.map((f) => [f.url, f.html]));
+
+    for (const [url, targets] of urlToTargets) {
+        const html = htmlByUrl.get(url) ?? "";
+        for (const t of targets) {
+            if (t.type === "exams") scrapedData.exams = html;
+            else if (t.type === "attendance") scrapedData.attendance[t.courseCode] = html;
+            else if (t.type === "cie") scrapedData.cie[t.courseCode] = html;
+            else if (t.type === "placement_eligibility") scrapedData.placementEligibility = html;
+            else if (t.type === "placement_status") scrapedData.placementStatus = html;
+            else if (t.type === "placement_results") scrapedData.placementResults = html;
+            else if (t.type === "placement_profile") scrapedData.placementProfile = html;
+        }
+    }
+
+    return scrapedData;
+}
+
+// ---- Scraping Logic ----
 const getCompleteStudentData = async (
     usn: string,
     day: string,
@@ -478,7 +654,6 @@ const getCompleteStudentData = async (
     try {
         browser = await getBrowserInstance();
 
-        // Use isolated context for each user to prevent state pollution & avoid process spawn overhead
         if (!isRemote && typeof browser.createBrowserContext === 'function') {
             browserContext = await browser.createBrowserContext();
             page = await browserContext.newPage();
@@ -488,7 +663,6 @@ const getCompleteStudentData = async (
 
         await page.setDefaultNavigationTimeout(30000);
 
-        // Performance Optimization: Block images, stylesheets, fonts, and media
         await page.setRequestInterception(true);
         page.on('request', (req: any) => {
             const rt = req.resourceType();
@@ -505,109 +679,10 @@ const getCompleteStudentData = async (
             }
         });
 
-        await page.goto("https://parents.msrit.edu/newparents/", { waitUntil: 'domcontentloaded', timeout: 30000 });
-
-        await page.type('#username', usn);
-        
-        // Select day robustly regardless of trailing spaces
-        await page.evaluate((dStr: string) => {
-            const sel = document.getElementById('dd') as HTMLSelectElement;
-            if (sel) {
-                const opt = Array.from(sel.options).find(o => o.value.trim() === dStr.trim());
-                if (opt) {
-                    sel.value = opt.value;
-                    sel.dispatchEvent(new Event('change', { bubbles: true }));
-                }
-            }
-        }, day);
-
-        await page.select('#mm', month);
-        await page.select('#yyyy', year);
-        
-        await Promise.all([
-            page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => {}),
-            page.evaluate(() => {
-                const btn = document.querySelector('.cn-login-btn, input[type="submit"], button[type="submit"]') as HTMLElement;
-                if (btn) btn.click();
-            })
-        ]);
-
-        // Explicitly wait for stage 2 elements OR dashboard elements to resolve in DOM
-        await page.waitForSelector('#id-type-select, .digit-input, #enteredid, a[href*="logout"], table', { timeout: 8000 }).catch(() => {});
-
-        let currentUrl = page.url();
-        let content = await page.content();
-        let hasLogout = content.toUpperCase().includes("LOGOUT");
-        let isDashboardUrl = currentUrl.toLowerCase().includes("dashboard") || currentUrl.toLowerCase().includes("ksign");
-
-        // Check if secondary verification form is required (dropdown or digit field present, and not logged in yet)
-        if (!isDashboardUrl && !hasLogout) {
-            const hasSelect = await page.$('#id-type-select, select[name="idType"]').catch(() => null);
-            const hasDigits = await page.$('.digit-input, #enteredid').catch(() => null);
-
-            if ((hasSelect || hasDigits) && last4Digits) {
-                // 1. Select option on #id-type-select
-                if (hasSelect) {
-                    await page.evaluate((targetAuthType: string) => {
-                        const sel = document.querySelector('#id-type-select, select[name="idType"]') as HTMLSelectElement;
-                        if (sel) {
-                            const cleanTarget = (targetAuthType || '').toLowerCase();
-                            let targetValue = '1'; // Default: Father Mobile
-                            if (cleanTarget.includes('mother') || cleanTarget === '2') {
-                                targetValue = '2';
-                            } else if (cleanTarget.includes('abc') || cleanTarget === '3') {
-                                targetValue = '3';
-                            }
-                            sel.value = targetValue;
-                            sel.dispatchEvent(new Event('change', { bubbles: true }));
-                        }
-                    }, authType || '');
-                }
-
-                // 2. Fill the 4 .digit-input fields and #enteredid
-                await page.evaluate((digits: string) => {
-                    const inputs = Array.from(document.querySelectorAll('.digit-input')) as HTMLInputElement[];
-                    const cleanDigits = String(digits).replace(/\D/g, '');
-                    
-                    for (let i = 0; i < inputs.length && i < cleanDigits.length; i++) {
-                        inputs[i].value = cleanDigits[i];
-                        inputs[i].dispatchEvent(new Event('input', { bubbles: true }));
-                        inputs[i].dispatchEvent(new Event('change', { bubbles: true }));
-                    }
-                    
-                    const hiddenField = document.getElementById('enteredid') as HTMLInputElement;
-                    if (hiddenField) {
-                        hiddenField.value = cleanDigits;
-                    }
-                }, last4Digits);
-
-                // 3. Click submit button #btn-submit
-                await Promise.all([
-                    page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => {}),
-                    page.evaluate(() => {
-                        const btn = document.querySelector('#btn-submit, input[type="submit"], button[type="submit"]') as HTMLElement;
-                        if (btn) btn.click();
-                    })
-                ]);
-
-                await page.waitForSelector('a[href*="logout"], .dash_od_row, table', { timeout: 8000 }).catch(() => {});
-
-                currentUrl = page.url();
-                content = await page.content();
-                hasLogout = content.toUpperCase().includes("LOGOUT");
-                isDashboardUrl = currentUrl.toLowerCase().includes("dashboard") || currentUrl.toLowerCase().includes("ksign");
-            }
-        }
-
-        if (!isDashboardUrl && !hasLogout) {
-            throw new Error("Invalid portal credentials or 4-digit PIN. Please verify your USN, Date of Birth, and PIN.");
-        }
-
-        const scrapedData: any = { dashboard: content, attendance: {}, cie: {} };
+        const content = await performPortalLogin(page, usn, day, month, year, authType, last4Digits);
         const cookies = await page.cookies();
         const cookieString = cookies.map((c: any) => `${c.name}=${c.value}`).join('; ');
 
-        // Clean up the page/context immediately to free memory
         if (page) {
             await page.close().catch(() => {});
             page = null;
@@ -621,73 +696,7 @@ const getCompleteStudentData = async (
             browser = null;
         }
 
-        const $dash = cheerio.load(content);
-        const courseRows = extractCourseRowsFromDashboard($dash);
-
-        const urlToTargets = new Map<string, any[]>();
-        const pushTarget = (href: string, courseCode: string, type: string) => {
-            const url = resolveParentsUrl(href);
-            if (!url) return;
-            if (!urlToTargets.has(url)) urlToTargets.set(url, []);
-            urlToTargets.get(url)?.push({ courseCode, type });
-        };
-        for (const row of courseRows) {
-            if (row.attLink) pushTarget(row.attLink, row.code, "attendance");
-            if (row.cieLink) pushTarget(row.cieLink, row.code, "cie");
-        }
-
-        const examsUrl = "https://parents.msrit.edu/newparents/index.php?option=com_history&task=getResult";
-        urlToTargets.set(examsUrl, [{ courseCode: "EXAMS", type: "exams" }]);
-
-        // Placement URLs
-        const placementEligibilityUrl = "https://parents.msrit.edu/newparents/index.php?option=com_placement&controller=placement&task=placementeligibility";
-        const placementStatusUrl = "https://parents.msrit.edu/newparents/index.php?option=com_placement&controller=placement&task=placementstatus";
-        const placementResultsUrl = "https://parents.msrit.edu/newparents/index.php?option=com_placement&controller=placement&task=placementresults";
-        const placementProfileUrl = "https://parents.msrit.edu/newparents/index.php?option=com_placement&controller=placement&task=getBasicprofiledetails";
-
-        urlToTargets.set(placementEligibilityUrl, [{ courseCode: "PLACEMENT", type: "placement_eligibility" }]);
-        urlToTargets.set(placementStatusUrl, [{ courseCode: "PLACEMENT", type: "placement_status" }]);
-        urlToTargets.set(placementResultsUrl, [{ courseCode: "PLACEMENT", type: "placement_results" }]);
-        urlToTargets.set(placementProfileUrl, [{ courseCode: "PLACEMENT", type: "placement_profile" }]);
-
-        // Ultra-fast HTTP client with connection pooling & keep-alive
-        const axiosInstance = axios.create({
-            timeout: 10000,
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-                'Cookie': cookieString
-            },
-            httpsAgent: sharedHttpsAgent
-        });
-
-        // Parallel non-blocking sub-request fetches
-        const uniqueUrls = [...urlToTargets.keys()];
-        const fetchPromises = uniqueUrls.map(async (url) => {
-            try {
-                const resp = await axiosInstance.get(url);
-                return { url, html: resp.data };
-            } catch (err) {
-                return { url, html: "" };
-            }
-        });
-
-        const fetched = await Promise.all(fetchPromises);
-        const htmlByUrl = new Map(fetched.map((f) => [f.url, f.html]));
-
-        for (const [url, targets] of urlToTargets) {
-            const html = htmlByUrl.get(url) ?? "";
-            for (const t of targets) {
-                if (t.type === "exams") scrapedData.exams = html;
-                else if (t.type === "attendance") scrapedData.attendance[t.courseCode] = html;
-                else if (t.type === "cie") scrapedData.cie[t.courseCode] = html;
-                else if (t.type === "placement_eligibility") scrapedData.placementEligibility = html;
-                else if (t.type === "placement_status") scrapedData.placementStatus = html;
-                else if (t.type === "placement_results") scrapedData.placementResults = html;
-                else if (t.type === "placement_profile") scrapedData.placementProfile = html;
-            }
-        }
-
-        return scrapedData;
+        return await fetchSubPagesInParallel(cookieString, content);
 
     } catch (error: any) {
         console.error(`[X] Automation Error: ${error.message}`);
@@ -717,22 +726,22 @@ const parseAndProcessData = (scrapedData: any) => {
             const mapping = [["present_classes", "cn-attend"], ["absent_classes", "cn-absent"], ["still_to_go", "cn-still"]];
             mapping.forEach(([key, cls]) => {
                 const spanMatch = $(`span[class*="${cls}"]`).text().match(/\[(\d+)\]/);
-                if (spanMatch) details[key] = parseInt(spanMatch[1], 10);
+                if (spanMatch) details[key] = Number.parseInt(spanMatch[1], 10);
             });
 
             // Fallback when class names change: scan visible [n] counts near labels
             const bodyText = $.root().text();
             if (details.present_classes === 0) {
                 const pm = bodyText.match(/present[^[]*\[(\d+)\]/i);
-                if (pm) details.present_classes = parseInt(pm[1], 10);
+                if (pm) details.present_classes = Number.parseInt(pm[1], 10);
             }
             if (details.absent_classes === 0) {
                 const am = bodyText.match(/absent[^[]*\[(\d+)\]/i);
-                if (am) details.absent_classes = parseInt(am[1], 10);
+                if (am) details.absent_classes = Number.parseInt(am[1], 10);
             }
             if (details.still_to_go === 0) {
                 const rm = bodyText.match(/(?:still\s*to\s*go|remaining)[^[]*\[(\d+)\]/i);
-                if (rm) details.still_to_go = parseInt(rm[1], 10);
+                if (rm) details.still_to_go = Number.parseInt(rm[1], 10);
             }
 
             $('table[class*="cn-attend-list1"] tbody tr, table[class*="attend-list1"] tbody tr').each((_, r) => {
@@ -872,7 +881,7 @@ const parseDobParts = (dobString: any) => {
         }
         
         const d = new Date(dobString);
-        if (!isNaN(d.valueOf())) {
+        if (!Number.isNaN(d.valueOf())) {
             return {
                 day: String(d.getDate()).padStart(2, '0'),
                 month: String(d.getMonth() + 1).padStart(2, '0'),

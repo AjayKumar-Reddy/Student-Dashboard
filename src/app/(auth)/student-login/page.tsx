@@ -194,8 +194,9 @@ export default function StudentLogin() {
 
                 <form onSubmit={handleSubmit} className="login-form">
                     <div className="form-group">
-                        <label className="form-label">University Seat Number</label>
+                        <label htmlFor="usn-input" className="form-label">University Seat Number</label>
                         <input
+                            id="usn-input"
                             type="text"
                             className="input-field"
                             value={usn}
@@ -205,7 +206,7 @@ export default function StudentLogin() {
                     </div>
 
                     <div className="form-group">
-                        <label className="form-label">Date of Birth</label>
+                        <span className="form-label">Date of Birth</span>
                         <div className="dob-grid">
                             <CustomSelect
                                 value={day}
@@ -235,7 +236,7 @@ export default function StudentLogin() {
                         </div>
 
                         <div className="form-group">
-                            <label className="form-label">Verification Option</label>
+                            <span className="form-label">Verification Option</span>
                             <CustomSelect
                                 value={authType}
                                 onChange={setAuthType}
@@ -245,8 +246,9 @@ export default function StudentLogin() {
                         </div>
 
                         <div className="form-group">
-                            <label className="form-label">Last 4 Digits (PIN)</label>
+                            <label htmlFor="pin-input" className="form-label">Last 4 Digits (PIN)</label>
                             <input
+                                id="pin-input"
                                 type="password"
                                 maxLength={4}
                                 className="input-field pin-input"
@@ -257,8 +259,9 @@ export default function StudentLogin() {
                         </div>
                     </div>
 
-                    <label className="remember-me-container">
+                    <label htmlFor="remember-me-checkbox" className="remember-me-container">
                         <input
+                            id="remember-me-checkbox"
                             type="checkbox"
                             className="remember-me-checkbox"
                             checked={rememberMe}

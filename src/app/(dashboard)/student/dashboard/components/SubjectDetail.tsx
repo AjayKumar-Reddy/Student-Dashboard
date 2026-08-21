@@ -294,7 +294,7 @@ const SubjectDetail: React.FC<SubjectDetailProps> = ({ subject, allSubjects, onS
                 min="0" 
                 max="100" 
                 value={targetPct} 
-                onChange={(e) => setTargetPct(parseInt(e.target.value))}
+                onChange={(e) => setTargetPct(Number.parseInt(e.target.value, 10))}
                 className="sd-att-range-slider"
               />
             </div>

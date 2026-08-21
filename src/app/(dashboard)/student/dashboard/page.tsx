@@ -53,7 +53,6 @@ export default function StudentDashboard() {
     // PWA Install State
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
     const [isInstallable, setIsInstallable] = useState(false);
-    const [isIOS, setIsIOS] = useState(false);
     const [showIOSPrompt, setShowIOSPrompt] = useState(false);
     
     // 1b. Route-aware Tab State
@@ -104,7 +103,6 @@ export default function StudentDashboard() {
         const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
         const isStandalone = ('standalone' in window.navigator) && ((window.navigator as any).standalone);
         
-        setIsIOS(isIosDevice);
         if (isIosDevice && !isStandalone) {
             const dismissed = localStorage.getItem("dismissedIOSInstallPrompt");
             if (!dismissed) {
@@ -151,7 +149,7 @@ export default function StudentDashboard() {
     }, [detailsBlob, student]);
 
     const totalCredits = useMemo(() =>
-        examHistory.reduce((acc: number, sem: any) => acc + (parseInt(sem.credits_earned) || 0), 0)
+        examHistory.reduce((acc: number, sem: any) => acc + (Number.parseInt(sem.credits_earned, 10) || 0), 0)
         , [examHistory]);
 
     const latestSGPA = useMemo(() =>
@@ -176,7 +174,7 @@ export default function StudentDashboard() {
     const sgpaTrendData = useMemo(() => examHistory.map((sem: any) => ({
         name: sem.semester.split(' ')[0] + ' ' + (sem.semester.split(' ')[2]?.substring(2) || ''),
         sgpa: parseFloat(sem.sgpa),
-        credits: parseInt(sem.credits_earned || 0)
+        credits: Number.parseInt(sem.credits_earned || 0, 10)
     })), [examHistory]);
 
     const gradeChartData = useMemo(() => {
@@ -233,8 +231,8 @@ export default function StudentDashboard() {
         try {
             const [day, month] = student.dob.split('-');
             const today = new Date();
-            return today.getDate() === parseInt(day, 10) && (today.getMonth() + 1) === parseInt(month, 10);
-        } catch (e) {
+            return today.getDate() === Number.parseInt(day, 10) && (today.getMonth() + 1) === Number.parseInt(month, 10);
+        } catch {
             return false;
         }
     }, [student]);
@@ -422,12 +420,12 @@ export default function StudentDashboard() {
                         { id: 'history', icon: <HistoryIcon size={20} />, label: 'Exam History' },
                         { id: 'simulator', icon: <Gamepad2 size={20} />, label: 'Simulator' },
                     ].map(tab => (
-                        <button key={tab.id} className={`nav-button ${activeTab === tab.id ? 'active' : ''}`} onClick={() => handleTabChange(tab.id)}>
+                        <button type="button" key={tab.id} className={`nav-button ${activeTab === tab.id ? 'active' : ''}`} onClick={() => handleTabChange(tab.id)}>
                             {tab.icon} <span>{tab.label}</span>
                         </button>
                     ))}
                     {isInstallable && (
-                        <button className="nav-button pwa-install-btn" onClick={handleInstallPWA} style={{ marginTop: 'auto', background: 'rgba(0, 173, 181, 0.1)', color: 'var(--accent-primary, #00ADB5)', border: '1px solid rgba(0, 173, 181, 0.2)' }}>
+                        <button type="button" className="nav-button pwa-install-btn" onClick={handleInstallPWA} style={{ marginTop: 'auto', background: 'rgba(0, 173, 181, 0.1)', color: 'var(--accent-primary, #00ADB5)', border: '1px solid rgba(0, 173, 181, 0.2)' }}>
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m8 17 4 4 4-4"/></svg>
                             <span>Install Web App</span>
                         </button>
@@ -496,6 +494,7 @@ export default function StudentDashboard() {
                             </button>
                             {isInstallable && (
                                 <button 
+                                    type="button"
                                     onClick={handleInstallPWA}
                                     style={{
                                         display: 'flex',
@@ -517,6 +516,7 @@ export default function StudentDashboard() {
                                 </button>
                             )}
                             <button 
+                                type="button"
                                 onClick={handleLogout}
                                 style={{
                                     display: 'flex',
@@ -537,6 +537,7 @@ export default function StudentDashboard() {
                             </button>
                             <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', marginTop: '4px', paddingTop: '8px', textAlign: 'center' }}>
                                 <button
+                                    type="button"
                                     onClick={() => {
                                         setShowMobileProfileMenu(false);
                                         setShowDeleteModal(true);
@@ -657,6 +658,7 @@ export default function StudentDashboard() {
                     { id: 'simulator', icon: <Gamepad2 size={20} />, label: 'Sim' },
                 ].map(tab => (
                     <button
+                        type="button"
                         key={tab.id}
                         className={`bottom-nav-item ${activeTab === tab.id ? 'active' : ''}`}
                         onClick={() => handleTabChange(tab.id)}
@@ -692,6 +694,7 @@ export default function StudentDashboard() {
                             <span style={{ fontWeight: 'bold', fontSize: '14px', color: 'var(--text-primary)' }}>Install MSR Insight</span>
                         </div>
                         <button 
+                            type="button"
                             onClick={() => {
                                 setShowIOSPrompt(false);
                                 localStorage.setItem("dismissedIOSInstallPrompt", "true");
@@ -765,6 +768,7 @@ export default function StudentDashboard() {
                         />
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             <button 
+                                type="button"
                                 onClick={handleDeleteAccount}
                                 disabled={isDeleting || confirmUsnInput.trim().toUpperCase() !== stdUsn.toUpperCase()}
                                 style={{
@@ -782,6 +786,7 @@ export default function StudentDashboard() {
                                 {isDeleting ? "Erasing everything..." : "Yes, delete permanently"}
                             </button>
                             <button 
+                                type="button"
                                 onClick={() => {
                                     setShowDeleteModal(false);
                                     setConfirmUsnInput("");
@@ -799,7 +804,7 @@ export default function StudentDashboard() {
                                     transition: 'all 0.2s'
                                 }}
                             >
-                                No, I want to stay!
+                                Nevermind, keep my data
                             </button>
                         </div>
                     </div>
