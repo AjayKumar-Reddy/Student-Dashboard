@@ -65,7 +65,7 @@ const SidebarProfile: React.FC<SidebarProfileProps> = ({ user, onLogout, onDelet
             {user.name}
           </span>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", marginTop: "4px", gap: "6px", flexWrap: "wrap" }}>
-            <button onClick={onLogout} className="profile-logout-link" title="Logout">
+            <button type="button" onClick={onLogout} className="profile-logout-link" title="Logout">
               <LogOut size={12} />
               <span>Logout</span>
             </button>
@@ -96,6 +96,7 @@ const SidebarProfile: React.FC<SidebarProfileProps> = ({ user, onLogout, onDelet
 
             {onDeleteData && (
               <button 
+                type="button"
                 data-tour="delete-account"
                 onClick={onDeleteData} 
                 style={{

@@ -16,6 +16,102 @@ function matchesAuthType(a?: string | null, b?: string | null) {
   return false;
 }
 
+interface AuthValidationResult {
+  valid: boolean;
+  status: number;
+  message?: string;
+  requiresSecondaryAuth?: boolean;
+}
+
+function validateExistingStudent(
+  student: any,
+  standardizedDob: string,
+  authType?: string,
+  last4Digits?: string
+): AuthValidationResult {
+  const storedDob = decryptField(student.dob);
+  const detailsBlob = decryptJSON<any>(student.details) || {};
+  const storedAuthType = decryptField(student.auth_type) || detailsBlob?.auth_type;
+  const storedEncryptedPin = student.encrypted_pin || detailsBlob?.encrypted_pin;
+  const storedPin = storedEncryptedPin ? decryptText(storedEncryptedPin) : null;
+
+  if (storedDob) {
+    const formattedStoredDob = formatDOB(storedDob);
+    if (formattedStoredDob !== standardizedDob && storedDob !== standardizedDob) {
+      return { valid: false, status: 401, message: "Invalid USN, Date of Birth, or Verification PIN." };
+    }
+  }
+
+  if (storedPin) {
+    if (!last4Digits || !authType) {
+      return {
+        valid: false,
+        status: 200,
+        requiresSecondaryAuth: true,
+        message: "Verification Method and 4-digit PIN are required for sign in."
+      };
+    }
+
+    const pinMatches = String(last4Digits).trim() === String(storedPin).trim();
+    const typeMatches = matchesAuthType(authType, storedAuthType);
+
+    if (!pinMatches || !typeMatches) {
+      return { valid: false, status: 401, message: "Invalid USN, Date of Birth, or Verification PIN." };
+    }
+  }
+
+  if (!storedPin && (!last4Digits || !authType)) {
+    return {
+      valid: false,
+      status: 200,
+      requiresSecondaryAuth: true,
+      message: "Verification details (PIN) required to register your credentials."
+    };
+  }
+
+  return { valid: true, status: 200 };
+}
+
+async function handleFirstTimeSync(
+  normalizedUSN: string,
+  standardizedDob: string,
+  authType?: string,
+  last4Digits?: string
+) {
+  if (!last4Digits || !authType) {
+    return {
+      success: false,
+      response: NextResponse.json(
+        {
+          success: false,
+          requiresSecondaryAuth: true,
+          message: "First-time registration requires secondary verification details (Mother/Father Mobile or ABC ID last 4 digits).",
+        },
+        { status: 200 }
+      )
+    };
+  }
+
+  try {
+    await scrapeAndSyncStudent(normalizedUSN, standardizedDob, authType, last4Digits);
+    const student = await prisma.student.findUnique({
+      where: { usn: normalizedUSN },
+    });
+    if (!student) {
+      throw new Error("Failed to retrieve student records from the college portal after scraping.");
+    }
+    return { success: true };
+  } catch (scrapeErr: any) {
+    return {
+      success: false,
+      response: NextResponse.json(
+        { success: false, message: scrapeErr.message || "Invalid credentials or unable to fetch records from portal." },
+        { status: 400 }
+      )
+    };
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -32,115 +128,30 @@ export async function POST(request: Request) {
     const standardizedDob = formatDOB(dob);
     const tokenExpiresIn = rememberMe !== false ? "30d" : "1d";
 
-    // Try to find the student in Postgres
-    let student = await prisma.student.findUnique({
-      where: {
-        usn: normalizedUSN,
-      },
+    const student = await prisma.student.findUnique({
+      where: { usn: normalizedUSN },
     });
 
-    // If student exists in DB and no forced re-sync requested -> Verify DOB & PIN securely!
     if (student && !forceResync) {
-      const storedDob = decryptField(student.dob);
-      const detailsBlob = decryptJSON<any>(student.details) || {};
-      const storedAuthType = decryptField(student.auth_type) || detailsBlob?.auth_type;
-      const storedEncryptedPin = student.encrypted_pin || detailsBlob?.encrypted_pin;
-      const storedPin = storedEncryptedPin ? decryptText(storedEncryptedPin) : null;
-
-      // 1. Verify Date of Birth (if stored)
-      if (storedDob) {
-        const formattedStoredDob = formatDOB(storedDob);
-        if (formattedStoredDob !== standardizedDob && storedDob !== standardizedDob) {
-          return NextResponse.json(
-            { success: false, message: "Invalid USN, Date of Birth, or Verification PIN." },
-            { status: 401 }
-          );
-        }
-      }
-
-      // 2. Verify Auth Type & 4-digit PIN (if stored)
-      if (storedPin) {
-        if (!last4Digits || !authType) {
-          return NextResponse.json(
-            {
-              success: false,
-              requiresSecondaryAuth: true,
-              message: "Verification Method and 4-digit PIN are required for sign in.",
-            },
-            { status: 200 }
-          );
-        }
-
-        const pinMatches = String(last4Digits).trim() === String(storedPin).trim();
-        const typeMatches = matchesAuthType(authType, storedAuthType);
-
-        if (!pinMatches || !typeMatches) {
-          return NextResponse.json(
-            { success: false, message: "Invalid USN, Date of Birth, or Verification PIN." },
-            { status: 401 }
-          );
-        }
-      }
-
-      // If existing student had missing PIN, but secondary auth parameters were provided, update/scrape to be safe
-      if (!storedPin && (!last4Digits || !authType)) {
+      const validation = validateExistingStudent(student, standardizedDob, authType, last4Digits);
+      if (!validation.valid) {
         return NextResponse.json(
           {
             success: false,
-            requiresSecondaryAuth: true,
-            message: "Verification details (PIN) required to register your credentials.",
+            message: validation.message,
+            requiresSecondaryAuth: validation.requiresSecondaryAuth
           },
-          { status: 200 }
+          { status: validation.status }
         );
       }
-
-      // Authenticate & Sign JWT token
-      const token = signToken({ usn: normalizedUSN }, { expiresIn: tokenExpiresIn });
-      return NextResponse.json({
-        success: true,
-        message: "Login successful",
-        data: {
-          usn: normalizedUSN,
-          sessionId: token,
-        },
-      });
-    }
-
-    // If student not found in DB (or forced re-sync/missing PIN), check for secondary verification input
-    if (!last4Digits || !authType) {
-      console.log(`[Student Auth API] USN ${normalizedUSN} requires secondary verification parameters...`);
-      return NextResponse.json(
-        {
-          success: false,
-          requiresSecondaryAuth: true,
-          message: "First-time registration requires secondary verification details (Mother/Father Mobile or ABC ID last 4 digits).",
-        },
-        { status: 200 }
-      );
-    }
-
-    console.warn(`[Student Auth API] Student not found in database. Scraping portal with secondary credentials...`);
-    try {
-      await scrapeAndSyncStudent(normalizedUSN, standardizedDob, authType, last4Digits);
-      student = await prisma.student.findUnique({
-        where: {
-          usn: normalizedUSN,
-        },
-      });
-      if (!student) {
-        throw new Error("Failed to retrieve student records from the college portal after scraping.");
+    } else {
+      const syncResult = await handleFirstTimeSync(normalizedUSN, standardizedDob, authType, last4Digits);
+      if (!syncResult.success) {
+        return syncResult.response!;
       }
-    } catch (scrapeErr: any) {
-      console.error(`[Student Auth API] Scraping failed: ${scrapeErr.message}`);
-      return NextResponse.json(
-        { success: false, message: scrapeErr.message || "Invalid credentials or unable to fetch records from portal." },
-        { status: 400 }
-      );
     }
 
-    // Sign the JWT token
     const token = signToken({ usn: normalizedUSN }, { expiresIn: tokenExpiresIn });
-
     return NextResponse.json({
       success: true,
       message: "Login successful",

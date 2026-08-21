@@ -18,7 +18,7 @@ const DOBSelector: React.FC<DOBSelectorProps> = ({ value, onChange, className = 
       const [vYear, vMonth, vDay] = value.split("-");
       setYear(vYear);
       setMonth(vMonth);
-      setDay(parseInt(vDay).toString());
+      setDay(Number.parseInt(vDay, 10).toString());
     }
   }, [value]);
 
@@ -33,8 +33,8 @@ const DOBSelector: React.FC<DOBSelectorProps> = ({ value, onChange, className = 
 
   const getDaysInMonth = (m: string, y: string) => {
     if (!m) return 31;
-    const monthNum = parseInt(m);
-    const yearNum = y ? parseInt(y) : 2024;
+    const monthNum = Number.parseInt(m, 10);
+    const yearNum = y ? Number.parseInt(y, 10) : 2024;
     return new Date(yearNum, monthNum, 0).getDate();
   };
 

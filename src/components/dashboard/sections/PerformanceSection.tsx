@@ -186,10 +186,10 @@ const PerformanceSection: React.FC<PerformanceSectionProps> = ({
                                 </div>
                                 <div className="chart-legend-custom">
                                     {currentSem.map((s: any, i: number) => (
-                                        <div key={i} className="legend-item-custom" onClick={() => onSelectSubject(s)}>
+                                        <button type="button" key={s.code || s.name || i} className="legend-item-custom" onClick={() => onSelectSubject(s)}>
                                             <div className="legend-dot-custom" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}></div>
                                             <span className="legend-label-custom">{s.name}</span>
-                                        </div>
+                                        </button>
                                     ))}
                                 </div>
                             </>
@@ -205,10 +205,10 @@ const PerformanceSection: React.FC<PerformanceSectionProps> = ({
                                 {currentSem.length > 0 && (
                                     <div className="empty-state-chips">
                                         {currentSem.map((s: any, idx: number) => (
-                                            <div key={idx} className="empty-state-chip" onClick={() => onSelectSubject(s)} style={{ cursor: 'pointer' }} title="Click for details">
+                                            <button type="button" key={s.code || s.name || idx} className="empty-state-chip" onClick={() => onSelectSubject(s)} title="Click for details">
                                                 <span className="empty-state-chip-dot" />
                                                 <span>{s.name || s.code}</span>
-                                            </div>
+                                            </button>
                                         ))}
                                     </div>
                                 )}
@@ -277,7 +277,7 @@ const PerformanceSection: React.FC<PerformanceSectionProps> = ({
                                         const hasSubjectMarks = (s.marks && s.marks > 0) || (s.assessments && s.assessments.length > 0);
                                         
                                         return (
-                                            <tr key={idx} onClick={() => onSelectSubject(s)} className="interactive-row">
+                                            <tr key={s.code || s.name || idx} onClick={() => onSelectSubject(s)} className="interactive-row">
                                                 <td className="text-muted course-code-col">{s.code}</td>
                                                 <td className="font-semibold course-name-col">{s.name}</td>
                                                 <td className="attendance-col" style={{ textAlign: 'center' }}>
