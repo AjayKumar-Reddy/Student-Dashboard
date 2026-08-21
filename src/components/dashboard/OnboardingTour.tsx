@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
-import { ShieldCheck, User, RefreshCw, Trash2, ArrowRight, ArrowLeft, X, Sparkles } from "lucide-react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { ShieldCheck, User, RefreshCw, Trash2, ArrowRight, ArrowLeft, X, Sparkles, Smartphone } from "lucide-react";
 
 export interface Step {
   targetSelector: string;
@@ -11,13 +11,13 @@ export interface Step {
   icon: React.ReactNode;
 }
 
-const TOUR_STEPS: Step[] = [
+const getTourSteps = (isMobile: boolean): Step[] => [
   {
-    targetSelector: '[data-tour="security-badge"]',
-    title: "Data Security",
-    badge: "Encrypted",
-    description: "All records are end-to-end encrypted.",
-    icon: <ShieldCheck size={20} style={{ color: "#10b981" }} />,
+    targetSelector: isMobile ? '[data-tour="install-pwa"]' : '[data-tour="security-badge"]',
+    title: isMobile ? "Install as Web App" : "Data Security",
+    badge: isMobile ? "Web App" : "Encrypted",
+    description: isMobile ? "Add to your home screen for fast 1-tap access anytime." : "All records are end-to-end encrypted.",
+    icon: isMobile ? <Smartphone size={20} style={{ color: "#00ADB5" }} /> : <ShieldCheck size={20} style={{ color: "#10b981" }} />,
   },
   {
     targetSelector: '[data-tour="update-btn"]',
@@ -50,11 +50,29 @@ interface OnboardingTourProps {
 export const OnboardingTour: React.FC<OnboardingTourProps> = ({ isOpen, onClose }) => {
   const [currentStepIdx, setCurrentStepIdx] = useState(0);
   const [spotlightRect, setSpotlightRect] = useState<DOMRect | null>(null);
+  const [isMobile, setIsMobile] = useState<boolean>(false);
 
-  const currentStep = TOUR_STEPS[currentStepIdx];
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(typeof window !== "undefined" && window.innerWidth <= 640);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  const tourSteps = useMemo(() => getTourSteps(isMobile), [isMobile]);
+  const currentStep = tourSteps[currentStepIdx] || tourSteps[0];
 
   const updateSpotlight = useCallback(() => {
     if (!currentStep) return;
+    
+    // On mobile Step 1 (Install as App), center smoothly as a welcome modal
+    if (isMobile && currentStepIdx === 0) {
+      setSpotlightRect(null);
+      return;
+    }
+
     let targetEl = document.querySelector(currentStep.targetSelector);
     
     // Mobile element fallback checks if desktop sidebar/header elements are hidden or unmeasured
@@ -75,7 +93,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ isOpen, onClose 
       }
     }
     setSpotlightRect(null);
-  }, [currentStep]);
+  }, [currentStep, isMobile, currentStepIdx]);
 
   useEffect(() => {
     if (isOpen) {
@@ -101,7 +119,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ isOpen, onClose 
   if (!isOpen) return null;
 
   const isFirstStep = currentStepIdx === 0;
-  const isLastStep = currentStepIdx === TOUR_STEPS.length - 1;
+  const isLastStep = currentStepIdx === tourSteps.length - 1;
 
   const handleNext = () => {
     if (isLastStep) {
@@ -288,7 +306,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ isOpen, onClose 
         <div className="tour-card-header">
           <div className="tour-step-badge">
             <Sparkles size={12} className="sparkle-icon" />
-            <span>Step {currentStepIdx + 1} of {TOUR_STEPS.length}</span>
+            <span>Step {currentStepIdx + 1} of {tourSteps.length}</span>
           </div>
           <button type="button" onClick={handleComplete} className="tour-close-btn" title="Skip tour">
             <X size={15} />
@@ -309,7 +327,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ isOpen, onClose 
         {/* Progress Dots & Action Controls */}
         <div className="tour-card-footer">
           <div className="tour-progress-bar">
-            {TOUR_STEPS.map((stepItem, idx) => (
+            {tourSteps.map((stepItem, idx) => (
               <button
                 type="button"
                 key={stepItem.title}
