@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Award } from 'lucide-react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer
@@ -268,6 +268,12 @@ const SubjectDetail: React.FC<SubjectDetailProps> = ({ subject, allSubjects, onS
               <span className="sd-legend-count sd-count-remaining">{remainingCount}</span>
             </div>
           </div>
+
+          {totalClasses === 0 && (
+            <div style={{ marginTop: '12px', padding: '8px 12px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', fontSize: '11px', color: 'var(--text-secondary)', textAlign: 'center' }}>
+              No classes recorded yet for this subject.
+            </div>
+          )}
         </section>
 
         <section className={`sd-card sd-calc-card sd-calculation-card ${showCalculator ? 'sd-expanded' : ''}`}>
@@ -467,7 +473,11 @@ const SubjectDetail: React.FC<SubjectDetailProps> = ({ subject, allSubjects, onS
               </ResponsiveContainer>
             </div>
           ) : (
-            <div className="sd-no-data"><p>No assessment data available yet</p></div>
+            <div className="sd-no-data" style={{ padding: '28px 16px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              <Award size={24} style={{ color: 'var(--accent-primary)', marginBottom: '6px', opacity: 0.8 }} />
+              <p style={{ fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 2px 0', fontSize: '13px' }}>No Assessment Data</p>
+              <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>Scores will display once published.</p>
+            </div>
           )}
         </section>
 
@@ -538,7 +548,12 @@ const SubjectDetail: React.FC<SubjectDetailProps> = ({ subject, allSubjects, onS
                   );
                 }) : (
                   <tr>
-                    <td colSpan={4} className="sd-table-empty">No assessment data available</td>
+                    <td colSpan={4} className="sd-table-empty">
+                      <div style={{ padding: '20px 12px', textAlign: 'center' }}>
+                        <p style={{ fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 2px 0', fontSize: '13px' }}>No Assessments Yet</p>
+                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>Scores will be listed once published.</p>
+                      </div>
+                    </td>
                   </tr>
                 )}
               </tbody>

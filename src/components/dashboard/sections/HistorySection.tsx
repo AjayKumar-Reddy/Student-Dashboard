@@ -25,9 +25,14 @@ const HistorySection: React.FC<HistorySectionProps> = ({
         return (
             <div className="tab-content">
                 <DashboardHeader name={studentName} sectionTitle="Exam History" sectionSubtitle="Complete record of your academic performance" />
-                <div className="empty-history">
-                    <History size={48} color="var(--text-muted)" />
-                    <h3>No exam history available</h3>
+                <div className="dashboard-empty-state" style={{ maxWidth: '520px', margin: '40px auto' }}>
+                    <div className="empty-state-icon-wrap purple">
+                        <History size={26} />
+                    </div>
+                    <h3 className="empty-state-title">No Exam History</h3>
+                    <p className="empty-state-desc">
+                        Past semester results and grade cards will appear here.
+                    </p>
                 </div>
             </div>
         );

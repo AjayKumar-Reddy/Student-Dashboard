@@ -401,6 +401,66 @@ const parsePlacementProfile = (html: string): Record<string, string> => {
     return cleanProfile;
 };
 
+// High-Speed Scraper Engine
+let sharedBrowser: any = null;
+
+const getBrowserInstance = async () => {
+    const browserlessToken = process.env.BROWSERLESS_TOKEN;
+    if (browserlessToken) {
+        return await puppeteer.connect({
+            browserWSEndpoint: `wss://chrome.browserless.io?token=${browserlessToken}`
+        });
+    }
+
+    if (sharedBrowser && sharedBrowser.isConnected()) {
+        return sharedBrowser;
+    }
+
+    sharedBrowser = await puppeteer.launch({
+        headless: true,
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--disable-gpu',
+            '--disable-extensions',
+            '--disable-background-networking',
+            '--disable-background-timer-throttling',
+            '--disable-backgrounding-occluded-windows',
+            '--disable-breakpad',
+            '--disable-component-extensions-with-background-pages',
+            '--disable-default-apps',
+            '--disable-features=TranslateUI,BlinkGenPropertyTrees',
+            '--disable-ipc-flooding-protection',
+            '--disable-renderer-backgrounding',
+            '--disable-sync',
+            '--force-color-profile=srgb',
+            '--metrics-recording-only',
+            '--mute-audio',
+            '--no-first-run',
+            '--no-default-browser-check',
+            '--password-store=basic',
+            '--use-mock-keychain',
+        ]
+    });
+
+    sharedBrowser.on('disconnected', () => {
+        sharedBrowser = null;
+    });
+
+    return sharedBrowser;
+};
+
+// Reusable HTTP Keep-Alive Agent for parallel sub-requests
+const sharedHttpsAgent = new https.Agent({
+    rejectUnauthorized: false,
+    keepAlive: true,
+    maxSockets: 50,
+    maxFreeSockets: 10,
+    timeout: 10000
+});
+
 // ---- Scraping Logic ----
 const getCompleteStudentData = async (
     usn: string,
@@ -410,29 +470,47 @@ const getCompleteStudentData = async (
     authType?: string,
     last4Digits?: string
 ) => {
-    let browser;
+    let browser: any = null;
+    let browserContext: any = null;
+    let page: any = null;
+    const isRemote = Boolean(process.env.BROWSERLESS_TOKEN);
+
     try {
-        const browserlessToken = process.env.BROWSERLESS_TOKEN;
-        if (browserlessToken) {
-            console.log(`[*] Connecting to Browserless.io for USN: ${usn}...`);
-            browser = await puppeteer.connect({
-                browserWSEndpoint: `wss://chrome.browserless.io?token=${browserlessToken}`
-            });
+        browser = await getBrowserInstance();
+
+        // Use isolated context for each user to prevent state pollution & avoid process spawn overhead
+        if (!isRemote && typeof browser.createBrowserContext === 'function') {
+            browserContext = await browser.createBrowserContext();
+            page = await browserContext.newPage();
         } else {
-            console.log(`[*] Launching local Puppeteer for USN: ${usn}...`);
-            browser = await puppeteer.launch({
-                headless: true,
-                args: ['--no-sandbox', '--disable-setuid-sandbox']
-            });
+            page = await browser.newPage();
         }
-        const page = await browser.newPage();
-        await page.setDefaultNavigationTimeout(60000); // 60 seconds
-        await page.goto("https://parents.msrit.edu/newparents/", { waitUntil: 'domcontentloaded', timeout: 60000 });
+
+        await page.setDefaultNavigationTimeout(30000);
+
+        // Performance Optimization: Block images, stylesheets, fonts, and media
+        await page.setRequestInterception(true);
+        page.on('request', (req: any) => {
+            const rt = req.resourceType();
+            const url = req.url();
+            if (
+                ['image', 'stylesheet', 'font', 'media', 'imageset'].includes(rt) ||
+                url.endsWith('.png') || url.endsWith('.jpg') || url.endsWith('.jpeg') ||
+                url.endsWith('.gif') || url.endsWith('.css') || url.endsWith('.woff') ||
+                url.endsWith('.woff2') || url.endsWith('.ttf') || url.endsWith('.ico')
+            ) {
+                req.abort();
+            } else {
+                req.continue();
+            }
+        });
+
+        await page.goto("https://parents.msrit.edu/newparents/", { waitUntil: 'domcontentloaded', timeout: 30000 });
 
         await page.type('#username', usn);
         
         // Select day robustly regardless of trailing spaces
-        await page.evaluate((dStr) => {
+        await page.evaluate((dStr: string) => {
             const sel = document.getElementById('dd') as HTMLSelectElement;
             if (sel) {
                 const opt = Array.from(sel.options).find(o => o.value.trim() === dStr.trim());
@@ -447,7 +525,7 @@ const getCompleteStudentData = async (
         await page.select('#yyyy', year);
         
         await Promise.all([
-            page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }).catch(() => {}),
+            page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => {}),
             page.evaluate(() => {
                 const btn = document.querySelector('.cn-login-btn, input[type="submit"], button[type="submit"]') as HTMLElement;
                 if (btn) btn.click();
@@ -455,7 +533,7 @@ const getCompleteStudentData = async (
         ]);
 
         // Explicitly wait for stage 2 elements OR dashboard elements to resolve in DOM
-        await page.waitForSelector('#id-type-select, .digit-input, #enteredid, a[href*="logout"], table', { timeout: 15000 }).catch(() => {});
+        await page.waitForSelector('#id-type-select, .digit-input, #enteredid, a[href*="logout"], table', { timeout: 8000 }).catch(() => {});
 
         let currentUrl = page.url();
         let content = await page.content();
@@ -464,17 +542,13 @@ const getCompleteStudentData = async (
 
         // Check if secondary verification form is required (dropdown or digit field present, and not logged in yet)
         if (!isDashboardUrl && !hasLogout) {
-            console.log("[*] Secondary verification check: not logged in yet. Looking for stage 2 form...");
-            
             const hasSelect = await page.$('#id-type-select, select[name="idType"]').catch(() => null);
             const hasDigits = await page.$('.digit-input, #enteredid').catch(() => null);
 
             if ((hasSelect || hasDigits) && last4Digits) {
-                console.log(`[*] Submitting secondary verification (${authType || 'Default'} / ****)...`);
-                
                 // 1. Select option on #id-type-select
                 if (hasSelect) {
-                    await page.evaluate((targetAuthType) => {
+                    await page.evaluate((targetAuthType: string) => {
                         const sel = document.querySelector('#id-type-select, select[name="idType"]') as HTMLSelectElement;
                         if (sel) {
                             const cleanTarget = (targetAuthType || '').toLowerCase();
@@ -491,7 +565,7 @@ const getCompleteStudentData = async (
                 }
 
                 // 2. Fill the 4 .digit-input fields and #enteredid
-                await page.evaluate((digits) => {
+                await page.evaluate((digits: string) => {
                     const inputs = Array.from(document.querySelectorAll('.digit-input')) as HTMLInputElement[];
                     const cleanDigits = String(digits).replace(/\D/g, '');
                     
@@ -509,14 +583,14 @@ const getCompleteStudentData = async (
 
                 // 3. Click submit button #btn-submit
                 await Promise.all([
-                    page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }).catch(() => {}),
+                    page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => {}),
                     page.evaluate(() => {
                         const btn = document.querySelector('#btn-submit, input[type="submit"], button[type="submit"]') as HTMLElement;
                         if (btn) btn.click();
                     })
                 ]);
 
-                await page.waitForSelector('a[href*="logout"], .dash_od_row, table', { timeout: 15000 }).catch(() => {});
+                await page.waitForSelector('a[href*="logout"], .dash_od_row, table', { timeout: 8000 }).catch(() => {});
 
                 currentUrl = page.url();
                 content = await page.content();
@@ -531,16 +605,23 @@ const getCompleteStudentData = async (
 
         const scrapedData: any = { dashboard: content, attendance: {}, cie: {} };
         const cookies = await page.cookies();
-        
-        const cookieString = cookies.map(c => `${c.name}=${c.value}`).join('; ');
+        const cookieString = cookies.map((c: any) => `${c.name}=${c.value}`).join('; ');
 
-        // Close browser, switch to light HTTP requests
-        await browser.close();
-        browser = null;
+        // Clean up the page/context immediately to free memory
+        if (page) {
+            await page.close().catch(() => {});
+            page = null;
+        }
+        if (browserContext) {
+            await browserContext.close().catch(() => {});
+            browserContext = null;
+        }
+        if (isRemote && browser) {
+            await browser.close().catch(() => {});
+            browser = null;
+        }
 
-        console.log("[*] Parsing Dashboard Course Table...");
         const $dash = cheerio.load(content);
-
         const courseRows = extractCourseRowsFromDashboard($dash);
 
         const urlToTargets = new Map<string, any[]>();
@@ -569,20 +650,20 @@ const getCompleteStudentData = async (
         urlToTargets.set(placementResultsUrl, [{ courseCode: "PLACEMENT", type: "placement_results" }]);
         urlToTargets.set(placementProfileUrl, [{ courseCode: "PLACEMENT", type: "placement_profile" }]);
 
-        // HTTP Instance bypassing certs matching python session
+        // Ultra-fast HTTP client with connection pooling & keep-alive
         const axiosInstance = axios.create({
             timeout: 10000,
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
                 'Cookie': cookieString
             },
-            httpsAgent: new https.Agent({ rejectUnauthorized: false })
+            httpsAgent: sharedHttpsAgent
         });
 
+        // Parallel non-blocking sub-request fetches
         const uniqueUrls = [...urlToTargets.keys()];
         const fetchPromises = uniqueUrls.map(async (url) => {
             try {
-                await new Promise((r) => setTimeout(r, Math.random() * 400 + 100));
                 const resp = await axiosInstance.get(url);
                 return { url, html: resp.data };
             } catch (err) {
@@ -612,7 +693,9 @@ const getCompleteStudentData = async (
         console.error(`[X] Automation Error: ${error.message}`);
         throw error;
     } finally {
-        if (browser) await (browser as any).close();
+        if (page) await page.close().catch(() => {});
+        if (browserContext) await browserContext.close().catch(() => {});
+        if (isRemote && browser) await browser.close().catch(() => {});
     }
 };
 

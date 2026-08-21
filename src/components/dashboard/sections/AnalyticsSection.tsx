@@ -5,7 +5,7 @@ import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, 
     CartesianGrid, Legend, Cell, ComposedChart, Line 
 } from "recharts";
-import { TrendingUp, Calendar, Star, AlertTriangle } from "lucide-react";
+import { TrendingUp, Calendar, Star, AlertTriangle, BarChart3, Award, Sparkles, CalendarClock } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 
 interface AnalyticsSectionProps {
@@ -78,17 +78,29 @@ const AnalyticsSection: React.FC<AnalyticsSectionProps> = ({
                         </div>
                     </div>
                     <div className="chart-body">
-                        <ResponsiveContainer width="100%" height={400}>
-                            <BarChart data={internalComparisonData} margin={{ top: 20, right: 10, bottom: 40, left: -20 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.25)" />
-                                <XAxis dataKey="code" stroke="#64748b" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-                                <YAxis domain={[0, 50]} stroke="#64748b" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} width={40} />
-                                <Tooltip content={<AnalyticsTooltip />} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
-                                <Legend verticalAlign="top" height={40} iconType="circle" />
-                                <Bar dataKey="studentScore" name="Your Score" fill="var(--accent-primary)" radius={[4, 4, 0, 0]} barSize={24} />
-                                <Bar dataKey="classAverage" name="Class Average" fill="var(--accent-primary)" opacity={0.5} radius={[4, 4, 0, 0]} barSize={24} />
-                            </BarChart>
-                        </ResponsiveContainer>
+                        {internalComparisonData.length > 0 ? (
+                            <ResponsiveContainer width="100%" height={400}>
+                                <BarChart data={internalComparisonData} margin={{ top: 20, right: 10, bottom: 40, left: -20 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.25)" />
+                                    <XAxis dataKey="code" stroke="#64748b" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                                    <YAxis domain={[0, 50]} stroke="#64748b" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} width={40} />
+                                    <Tooltip content={<AnalyticsTooltip />} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
+                                    <Legend verticalAlign="top" height={40} iconType="circle" />
+                                    <Bar dataKey="studentScore" name="Your Score" fill="var(--accent-primary)" radius={[4, 4, 0, 0]} barSize={24} />
+                                    <Bar dataKey="classAverage" name="Class Average" fill="var(--accent-primary)" opacity={0.5} radius={[4, 4, 0, 0]} barSize={24} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="dashboard-empty-state">
+                                <div className="empty-state-icon-wrap blue">
+                                    <BarChart3 size={26} />
+                                </div>
+                                <h4 className="empty-state-title">No CIE Data Yet</h4>
+                                <p className="empty-state-desc">
+                                    Class comparisons will appear once assessments are graded.
+                                </p>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -97,45 +109,69 @@ const AnalyticsSection: React.FC<AnalyticsSectionProps> = ({
                         <h3 className="chart-title">Grade Distribution</h3>
                     </div>
                     <div className="chart-body">
-                        <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={gradeChartData} margin={{ top: 10, right: 10, bottom: 0, left: -20 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.25)" vertical={false} />
-                                <XAxis dataKey="grade" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
-                                <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} width={40} />
-                                <Tooltip
-                                    contentStyle={{
-                                        backgroundColor: 'var(--bg-secondary)',
-                                        border: '1px solid var(--border-subtle)',
-                                        borderRadius: '12px',
-                                        color: '#ffffff',
-                                    }}
-                                    labelStyle={{ color: '#ffffff' }}
-                                    itemStyle={{ color: '#ffffff' }}
-                                    cursor={{ fill: 'var(--bg-primary)', opacity: 0.4 }}
-                                />
-                                <Bar dataKey="count" radius={[8, 8, 0, 0]}>
-                                    {gradeChartData.map((entry, index) => <Cell key={index} fill={entry.color} />)}
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
+                        {gradeChartData.length > 0 ? (
+                            <ResponsiveContainer width="100%" height={300}>
+                                <BarChart data={gradeChartData} margin={{ top: 10, right: 10, bottom: 0, left: -20 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.25)" vertical={false} />
+                                    <XAxis dataKey="grade" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
+                                    <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} width={40} />
+                                    <Tooltip
+                                        contentStyle={{
+                                            backgroundColor: 'var(--bg-secondary)',
+                                            border: '1px solid var(--border-subtle)',
+                                            borderRadius: '12px',
+                                            color: '#ffffff',
+                                        }}
+                                        labelStyle={{ color: '#ffffff' }}
+                                        itemStyle={{ color: '#ffffff' }}
+                                        cursor={{ fill: 'var(--bg-primary)', opacity: 0.4 }}
+                                    />
+                                    <Bar dataKey="count" radius={[8, 8, 0, 0]}>
+                                        {gradeChartData.map((entry, index) => <Cell key={index} fill={entry.color} />)}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="dashboard-empty-state" style={{ minHeight: '220px' }}>
+                                <div className="empty-state-icon-wrap emerald">
+                                    <Award size={24} />
+                                </div>
+                                <h4 className="empty-state-title">No Grades Available</h4>
+                                <p className="empty-state-desc">
+                                    Letter grades will show after semester results.
+                                </p>
+                            </div>
+                        )}
                     </div>
                 </div>
 
                 <div className="chart-card">
                     <div className="chart-header"><h3 className="chart-title">SGPA & Credits Trajectory</h3></div>
                     <div className="chart-body">
-                        <ResponsiveContainer width="100%" height={300}>
-                            <ComposedChart data={sgpaTrendData} margin={{ top: 20, right: 0, bottom: 0, left: -20 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.25)" vertical={false} />
-                                <XAxis dataKey="name" stroke="#64748b" fontSize={11} tickLine={false} />
-                                <YAxis yAxisId="left" stroke="#64748b" fontSize={11} tickLine={false} width={40} />
-                                <YAxis yAxisId="right" orientation="right" hide />
-                                <Tooltip content={<AnalyticsTooltip />} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
-                                <Legend verticalAlign="top" height={36} iconType="circle" />
-                                <Bar yAxisId="left" dataKey="credits" fill="rgba(16, 185, 129, 0.3)" radius={[4, 4, 0, 0]} name="Credits" />
-                                <Line yAxisId="right" type="monotone" dataKey="sgpa" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, fill: '#3b82f6' }} activeDot={{ r: 6 }} name="SGPA" />
-                            </ComposedChart>
-                        </ResponsiveContainer>
+                        {sgpaTrendData.length > 0 ? (
+                            <ResponsiveContainer width="100%" height={300}>
+                                <ComposedChart data={sgpaTrendData} margin={{ top: 20, right: 0, bottom: 0, left: -20 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.25)" vertical={false} />
+                                    <XAxis dataKey="name" stroke="#64748b" fontSize={11} tickLine={false} />
+                                    <YAxis yAxisId="left" stroke="#64748b" fontSize={11} tickLine={false} width={40} />
+                                    <YAxis yAxisId="right" orientation="right" hide />
+                                    <Tooltip content={<AnalyticsTooltip />} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
+                                    <Legend verticalAlign="top" height={36} iconType="circle" />
+                                    <Bar yAxisId="left" dataKey="credits" fill="rgba(16, 185, 129, 0.3)" radius={[4, 4, 0, 0]} name="Credits" />
+                                    <Line yAxisId="right" type="monotone" dataKey="sgpa" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, fill: '#3b82f6' }} activeDot={{ r: 6 }} name="SGPA" />
+                                </ComposedChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="dashboard-empty-state" style={{ minHeight: '220px' }}>
+                                <div className="empty-state-icon-wrap purple">
+                                    <TrendingUp size={24} />
+                                </div>
+                                <h4 className="empty-state-title">No Trajectory Data</h4>
+                                <p className="empty-state-desc">
+                                    Trend will appear after initial semester results.
+                                </p>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -148,24 +184,48 @@ const AnalyticsSection: React.FC<AnalyticsSectionProps> = ({
                         <div>
                             <div className="insight-label">Academic Standing</div>
                             <div className="insight-value">
-                                Your current SGPA is {latestSGPA}. 
-                                {sgpaDiffValue !== 0 ? (sgpaDiffValue >= 0 ? ` Improved by ${sgpaDiffValue.toFixed(2)}` : ` Decreased by ${Math.abs(sgpaDiffValue).toFixed(2)}`) + ' compared to the previous semester.' : ""}
+                                {latestSGPA > 0 ? (
+                                    <>
+                                        Current SGPA: {latestSGPA}. 
+                                        {sgpaDiffValue !== 0 ? (sgpaDiffValue >= 0 ? ` (+${sgpaDiffValue.toFixed(2)})` : ` (${sgpaDiffValue.toFixed(2)})`) + ' vs previous.' : ""}
+                                    </>
+                                ) : (
+                                    "Results will appear after exams."
+                                )}
                             </div>
                         </div>
                     </div>
                     <div className="insight-item">
-                        <Calendar className="insight-icon" style={{ color: overallAttendance >= 75 ? 'var(--success)' : 'var(--error)' }} />
+                        <Calendar 
+                            className="insight-icon" 
+                            style={{ 
+                                color: overallAttendance === 0 
+                                    ? 'var(--accent-primary)' 
+                                    : overallAttendance >= 75 
+                                        ? 'var(--success)' 
+                                        : 'var(--error)' 
+                            }} 
+                        />
                         <div>
                             <div className="insight-label">Attendance Analysis</div>
-                            <div className="insight-value">{overallAttendance >= 85 ? 'Excellent attendance record!' : overallAttendance >= 75 ? 'Attendance is adequate.' : 'Attendance needs immediate improvement.'}</div>
+                            <div className="insight-value">
+                                {overallAttendance === 0 
+                                    ? 'Tracking in progress.'
+                                    : overallAttendance >= 85 
+                                        ? 'Excellent attendance record.' 
+                                        : overallAttendance >= 75 
+                                            ? 'Attendance is adequate.' 
+                                            : 'Attendance needs improvement.'
+                                }
+                            </div>
                         </div>
                     </div>
                     {bestSubject && (
                         <div className="insight-item">
                             <Star className="insight-icon" style={{ color: '#F59E0B' }} />
                             <div>
-                                <div className="insight-label">Top Performing Subject</div>
-                                <div className="insight-value">{bestSubject.name} ({bestSubject.code}) — {bestSubject.marks}/50 CIE Marks</div>
+                                <div className="insight-label">Top Subject</div>
+                                <div className="insight-value">{bestSubject.name} ({bestSubject.code}) — {bestSubject.marks}/50</div>
                             </div>
                         </div>
                     )}
@@ -173,8 +233,17 @@ const AnalyticsSection: React.FC<AnalyticsSectionProps> = ({
                         <div className="insight-item">
                             <AlertTriangle className="insight-icon" style={{ color: '#EF4444' }} />
                             <div>
-                                <div className="insight-label">Requires Attention</div>
-                                <div className="insight-value">{weakestSubject.name} ({weakestSubject.code}) — {weakestSubject.marks}/50 CIE Marks</div>
+                                <div className="insight-label">Needs Attention</div>
+                                <div className="insight-value">{weakestSubject.name} ({weakestSubject.code}) — {weakestSubject.marks}/50</div>
+                            </div>
+                        </div>
+                    )}
+                    {!bestSubject && !weakestSubject && (
+                        <div className="insight-item">
+                            <Sparkles className="insight-icon" style={{ color: 'var(--accent-primary)' }} />
+                            <div>
+                                <div className="insight-label">Focus Area</div>
+                                <div className="insight-value">Aim for 85%+ attendance and consistent CIE scores.</div>
                             </div>
                         </div>
                     )}
