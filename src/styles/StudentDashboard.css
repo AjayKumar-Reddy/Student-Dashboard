@@ -578,6 +578,13 @@
     border-color: rgba(239, 68, 68, 0.3);
 }
 
+.pill.info {
+    color: var(--accent-primary, #00ADB5);
+    border-color: rgba(0, 173, 181, 0.25);
+    background: rgba(0, 173, 181, 0.06);
+    font-size: 12px;
+}
+
 /* Loading */
 .dashboard-loading {
     display: flex;
@@ -2235,4 +2242,136 @@
     .mobile-top-navbar {
         display: flex;
     }
+}
+
+/* ==========================================================================
+   Dashboard Empty States & Semester Start Visuals
+   ========================================================================== */
+
+.dashboard-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 28px 20px;
+    background: rgba(19, 26, 38, 0.4);
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    margin: 4px 0;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.2s ease;
+}
+
+.dashboard-empty-state:hover {
+    border-color: rgba(0, 173, 181, 0.25);
+    background: rgba(19, 26, 38, 0.5);
+}
+
+.empty-state-icon-wrap {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: rgba(0, 173, 181, 0.1);
+    border: 1px solid rgba(0, 173, 181, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 12px;
+    color: var(--accent-primary, #00ADB5);
+    box-shadow: 0 0 20px rgba(0, 173, 181, 0.12);
+}
+
+.empty-state-icon-wrap.purple {
+    background: rgba(139, 92, 246, 0.1);
+    border-color: rgba(139, 92, 246, 0.25);
+    color: #a78bfa;
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.12);
+}
+
+.empty-state-icon-wrap.blue {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.25);
+    color: #60a5fa;
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.12);
+}
+
+.empty-state-icon-wrap.emerald {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: rgba(16, 185, 129, 0.25);
+    color: #34d399;
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.12);
+}
+
+.empty-state-icon-wrap.amber {
+    background: rgba(245, 158, 11, 0.1);
+    border-color: rgba(245, 158, 11, 0.25);
+    color: #fbbf24;
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.12);
+}
+
+.empty-state-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary, #ffffff);
+    margin: 0 0 4px 0;
+    letter-spacing: -0.01em;
+}
+
+.empty-state-desc {
+    font-size: 12px;
+    color: var(--text-secondary, #94a3b8);
+    max-width: 380px;
+    line-height: 1.4;
+    margin: 0 0 10px 0;
+}
+
+.empty-state-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    max-width: 520px;
+    margin-top: 4px;
+}
+
+.empty-state-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 12px;
+    color: var(--text-secondary, #cbd5e1);
+    transition: all 0.2s ease;
+}
+
+.empty-state-chip:hover {
+    background: rgba(0, 173, 181, 0.08);
+    border-color: rgba(0, 173, 181, 0.3);
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+
+.empty-state-chip-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent-primary, #00ADB5);
+}
+
+.empty-state-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--accent-primary, #00ADB5);
+    background: rgba(0, 173, 181, 0.08);
+    border: 1px solid rgba(0, 173, 181, 0.2);
+    padding: 6px 14px;
+    border-radius: 20px;
 }

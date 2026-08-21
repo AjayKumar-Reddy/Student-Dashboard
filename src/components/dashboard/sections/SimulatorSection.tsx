@@ -144,6 +144,11 @@ const SimulatorSection: React.FC<SimulatorSectionProps> = ({
         return 4;
     };
 
+    const hasAnyAttendanceDates = currentSem.some((s: any) => 
+        (s.attendance_details?.present_dates && s.attendance_details.present_dates.length > 0) ||
+        (s.attendance_details?.absent_dates && s.attendance_details.absent_dates.length > 0)
+    );
+
     return (
         <div className="tab-content">
             <DashboardHeader name={studentName} sectionTitle="Interactive Simulator" sectionSubtitle="Experiment with your grades and explore your global attendance" />
@@ -155,61 +160,73 @@ const SimulatorSection: React.FC<SimulatorSectionProps> = ({
                         <p className="chart-subtitle">Precision Grade & Credit Simulation</p>
                     </div>
                     <div className="predictor-container">
-                        <div className="predictor-layout">
-                            <div className="predictor-scoreboard">
-                                <div className="score-item sgpa">
-                                    <div className="score-label">Projected SGPA</div>
-                                    <div className="score-value">{projSGPA.toFixed(2)}</div>
-                                </div>
-                                <div className="score-divider" />
-                                <div className="score-item cgpa">
-                                    <div className="score-label">Projected CGPA</div>
-                                    <div className="score-value">{projCGPA.toFixed(2)}</div>
-                                </div>
-                            </div>
-
-                            <div className="predictor-controls">
-                                <div className="controls-header">
-                                    <span>Subject</span>
-                                    <div className="controls-labels">
-                                        <span className="label-credits">Credits</span>
-                                        <span className="label-grade">Grade</span>
+                        {currentSem.length > 0 ? (
+                            <div className="predictor-layout">
+                                <div className="predictor-scoreboard">
+                                    <div className="score-item sgpa">
+                                        <div className="score-label">Projected SGPA</div>
+                                        <div className="score-value">{projSGPA.toFixed(2)}</div>
+                                    </div>
+                                    <div className="score-divider" />
+                                    <div className="score-item cgpa">
+                                        <div className="score-label">Projected CGPA</div>
+                                        <div className="score-value">{projCGPA.toFixed(2)}</div>
                                     </div>
                                 </div>
-                                <div className="controls-scrollable">
-                                    {currentSem.map((subj: any) => {
-                                        const currentGrade = predictedGrades[subj.code] || 'O';
-                                        return (
-                                            <div key={subj.code} className="subject-row">
-                                                <div className="subj-info">
-                                                    <div className="subj-name" title={subj.name}>{subj.name}</div>
-                                                    <div className="subj-code">{subj.code}</div>
+
+                                <div className="predictor-controls">
+                                    <div className="controls-header">
+                                        <span>Subject</span>
+                                        <div className="controls-labels">
+                                            <span className="label-credits">Credits</span>
+                                            <span className="label-grade">Grade</span>
+                                        </div>
+                                    </div>
+                                    <div className="controls-scrollable">
+                                        {currentSem.map((subj: any) => {
+                                            const currentGrade = predictedGrades[subj.code] || 'O';
+                                            return (
+                                                <div key={subj.code} className="subject-row">
+                                                    <div className="subj-info">
+                                                        <div className="subj-name" title={subj.name}>{subj.name}</div>
+                                                        <div className="subj-code">{subj.code}</div>
+                                                    </div>
+                                                    <div className="subj-pickers">
+                                                        <select 
+                                                            value={simulatedCredits[subj.code] ?? 4} 
+                                                            onChange={(e) => setSimulatedCredits({...simulatedCredits, [subj.code]: parseInt(e.target.value)})}
+                                                            className="simulator-select credit-select"
+                                                        >
+                                                            {[0,1,2,3,4,5].map(c => <option key={c} value={c}>{c}</option>)}
+                                                        </select>
+                                                        <select 
+                                                            value={currentGrade} 
+                                                            onChange={(e) => setPredictedGrades({...predictedGrades, [subj.code]: e.target.value})}
+                                                            className="simulator-select grade-select"
+                                                            style={{ color: GRADE_COLORS[currentGrade] }}
+                                                        >
+                                                            {Object.keys(GRADE_POINTS).map(g => (
+                                                                <option key={g} value={g} style={{ color: '#fff', background: '#1e293b' }}>{g}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
                                                 </div>
-                                                <div className="subj-pickers">
-                                                    <select 
-                                                        value={simulatedCredits[subj.code] ?? 4} 
-                                                        onChange={(e) => setSimulatedCredits({...simulatedCredits, [subj.code]: parseInt(e.target.value)})}
-                                                        className="simulator-select credit-select"
-                                                    >
-                                                        {[0,1,2,3,4,5].map(c => <option key={c} value={c}>{c}</option>)}
-                                                    </select>
-                                                    <select 
-                                                        value={currentGrade} 
-                                                        onChange={(e) => setPredictedGrades({...predictedGrades, [subj.code]: e.target.value})}
-                                                        className="simulator-select grade-select"
-                                                        style={{ color: GRADE_COLORS[currentGrade] }}
-                                                    >
-                                                        {Object.keys(GRADE_POINTS).map(g => (
-                                                            <option key={g} value={g} style={{ color: '#fff', background: '#1e293b' }}>{g}</option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        ) : (
+                            <div className="dashboard-empty-state" style={{ margin: '12px 0' }}>
+                                <div className="empty-state-icon-wrap emerald">
+                                    <Sparkles size={24} />
+                                </div>
+                                <h4 className="empty-state-title">No Courses to Simulate</h4>
+                                <p className="empty-state-desc">
+                                    Course subjects will appear once registrations are updated.
+                                </p>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -218,65 +235,77 @@ const SimulatorSection: React.FC<SimulatorSectionProps> = ({
                         <h3 className="chart-title"><Calendar size={18} style={{ display: 'inline', color: '#10b981', marginRight: '6px', verticalAlign: '-3px' }} /> Global Attendance Heatmap</h3>
                     </div>
                     <div className="chart-body" style={{ overflowX: 'auto', padding: '10px 0' }}>
-                        <div className="github-heatmap-container">
-                            <div className="heatmap-header-row">
-                                <div className="day-label-cols" />
-                                <div className="weeks-labels-container">
-                                    {weeks.map((w, idx) => {
-                                        const showMonth = idx === 0 || (w[0].month !== weeks[idx-1][0].month);
-                                        return (
-                                            <div key={idx} className="month-label-col">
-                                                {showMonth ? <span className="month-name-tag">{w[0].month}</span> : null}
+                        {hasAnyAttendanceDates ? (
+                            <div className="github-heatmap-container">
+                                <div className="heatmap-header-row">
+                                    <div className="day-label-cols" />
+                                    <div className="weeks-labels-container">
+                                        {weeks.map((w, idx) => {
+                                            const showMonth = idx === 0 || (w[0].month !== weeks[idx-1][0].month);
+                                            return (
+                                                <div key={idx} className="month-label-col">
+                                                    {showMonth ? <span className="month-name-tag">{w[0].month}</span> : null}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                                <div className="heatmap-grid-core">
+                                    <div className="day-labels">
+                                        <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+                                    </div>
+                                    <div className="weeks-container">
+                                        {weeks.map((week, wIdx) => (
+                                            <div key={wIdx} className="heatmap-column">
+                                                {Array.from({ length: 7 }).map((_, dIdx) => {
+                                                    const day = week.find((d: any) => d.dayIdx === dIdx);
+                                                    if (!day) return <div key={dIdx} className="heatmap-square empty" />;
+                                                    const level = getLevel(day.present, day.absent);
+                                                    const isSelected = selectedHeatmapDay?.dateStr === day.dateStr;
+                                                    return (
+                                                        <div 
+                                                            key={dIdx} 
+                                                            className={`heatmap-square level-${level}`} 
+                                                            style={{ 
+                                                                background: COLORS[level], 
+                                                                cursor: 'pointer', 
+                                                                outline: isSelected ? '2px solid #fff' : 'none',
+                                                                zIndex: isSelected ? 10 : 1
+                                                            }}
+                                                            title={`${day.niceDate}: ${day.present} present, ${day.absent} absent`}
+                                                            onClick={() => setSelectedHeatmapDay(day)}
+                                                        />
+                                                    );
+                                                })}
                                             </div>
-                                        );
-                                    })}
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="heatmap-footer">
+                                    <div className="legend">
+                                        <span>Less</span>
+                                        <div className="heatmap-square" style={{ background: COLORS[0] }} />
+                                        <div className="heatmap-square" style={{ background: COLORS[1] }} />
+                                        <div className="heatmap-square" style={{ background: COLORS[2] }} />
+                                        <div className="heatmap-square" style={{ background: COLORS[3] }} />
+                                        <div className="heatmap-square" style={{ background: COLORS[4] }} />
+                                        <span>More</span>
+                                    </div>
                                 </div>
                             </div>
-                            <div className="heatmap-grid-core">
-                                <div className="day-labels">
-                                    <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+                        ) : (
+                            <div className="dashboard-empty-state" style={{ margin: '10px 0' }}>
+                                <div className="empty-state-icon-wrap">
+                                    <Calendar size={24} />
                                 </div>
-                                <div className="weeks-container">
-                                    {weeks.map((week, wIdx) => (
-                                        <div key={wIdx} className="heatmap-column">
-                                            {Array.from({ length: 7 }).map((_, dIdx) => {
-                                                const day = week.find((d: any) => d.dayIdx === dIdx);
-                                                if (!day) return <div key={dIdx} className="heatmap-square empty" />;
-                                                const level = getLevel(day.present, day.absent);
-                                                const isSelected = selectedHeatmapDay?.dateStr === day.dateStr;
-                                                return (
-                                                    <div 
-                                                        key={dIdx} 
-                                                        className={`heatmap-square level-${level}`} 
-                                                        style={{ 
-                                                            background: COLORS[level], 
-                                                            cursor: 'pointer', 
-                                                            outline: isSelected ? '2px solid #fff' : 'none',
-                                                            zIndex: isSelected ? 10 : 1
-                                                        }}
-                                                        title={`${day.niceDate}: ${day.present} present, ${day.absent} absent`}
-                                                        onClick={() => setSelectedHeatmapDay(day)}
-                                                    />
-                                                );
-                                            })}
-                                        </div>
-                                    ))}
-                                </div>
+                                <h4 className="empty-state-title">No Attendance Logs Yet</h4>
+                                <p className="empty-state-desc">
+                                    Daily attendance activity will display here as classes are conducted.
+                                </p>
                             </div>
-                            <div className="heatmap-footer">
-                                <div className="legend">
-                                    <span>Less</span>
-                                    <div className="heatmap-square" style={{ background: COLORS[0] }} />
-                                    <div className="heatmap-square" style={{ background: COLORS[1] }} />
-                                    <div className="heatmap-square" style={{ background: COLORS[2] }} />
-                                    <div className="heatmap-square" style={{ background: COLORS[3] }} />
-                                    <div className="heatmap-square" style={{ background: COLORS[4] }} />
-                                    <span>More</span>
-                                </div>
-                            </div>
-                        </div>
+                        )}
                         
-                        {selectedHeatmapDay && (
+                        {hasAnyAttendanceDates && selectedHeatmapDay && (
                             <div className="heatmap-details-panel">
                                 <div className="details-header">
                                     <h4 className="details-title">Details for {selectedHeatmapDay.niceDate}</h4>
