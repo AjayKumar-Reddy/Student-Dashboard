@@ -23,10 +23,11 @@ export default function RootLayout({
     <html lang="en" className={inter.variable} suppressHydrationWarning>
       <head>
         <link rel="icon" href="/logo-icon.svg" />
+        <link rel="apple-touch-icon" href="/logo-icon.png" />
         <link rel="manifest" href="/manifest.json" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="theme-color" content="#0A0A0A" />
+        <meta name="theme-color" content="#080C14" />
       </head>
       <body suppressHydrationWarning>
         <AppWrapper>
