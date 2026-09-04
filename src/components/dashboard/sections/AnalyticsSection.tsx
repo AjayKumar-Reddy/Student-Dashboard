@@ -40,7 +40,7 @@ const AnalyticsTooltip = ({ active, payload, label }: any) => {
 
                 {/* Score Rows */}
                 {payload.map((item: any, index: number) => (
-                    <div key={index} className="tooltip-row">
+                    <div key={item.dataKey || item.name || `tooltip-row-${item.value}-${index}`} className="tooltip-row">
                         <span className="tooltip-label">{item.name}</span>
                         <span className="tooltip-value" style={{ color: item.color || item.fill }}>
                             {item.value} {item.name.toLowerCase().includes('score') || item.name.toLowerCase().includes('average') ? '/ 50' : ''}
@@ -100,7 +100,7 @@ const GradeDistributionChart: React.FC<{ data: any[] }> = ({ data }) => {
                         cursor={{ fill: 'var(--bg-primary)', opacity: 0.4 }}
                     />
                     <Bar dataKey="count" radius={[8, 8, 0, 0]}>
-                        {data.map((entry, index) => <Cell key={index} fill={entry.color} />)}
+                        {data.map((entry, index) => <Cell key={`grade-bar-${entry.grade || entry.name || entry.color || index}`} fill={entry.color} />)}
                     </Bar>
                 </BarChart>
             </ResponsiveContainer>
@@ -284,4 +284,4 @@ const AnalyticsSection: React.FC<AnalyticsSectionProps> = ({
     );
 };
 
-export default AnalyticsSection;
+export default React.memo(AnalyticsSection);

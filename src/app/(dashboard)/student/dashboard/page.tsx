@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useMemo, useRef } from "react";
+import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import axios from "axios";
 import {
@@ -55,10 +55,17 @@ export default function StudentDashboard() {
     const [isInstallable, setIsInstallable] = useState(false);
     const [showIOSPrompt, setShowIOSPrompt] = useState(false);
     
-    // 1b. Route-aware Tab State
+    // 1b. Route-aware Tab State with Zero-Latency Response
     const searchParams = useSearchParams();
     const pathname = usePathname();
-    const activeTab = searchParams.get('tab') || 'performance';
+    const [activeTab, setActiveTab] = useState<string>(() => searchParams.get('tab') || 'performance');
+
+    useEffect(() => {
+        const tabParam = searchParams.get('tab');
+        if (tabParam && tabParam !== activeTab) {
+            setActiveTab(tabParam);
+        }
+    }, [searchParams]);
     
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [nextAllowedAt, setNextAllowedAt] = useState<string | null>(null);
@@ -341,14 +348,17 @@ export default function StudentDashboard() {
         }
     }, [currentSem, predictedGrades]);
 
-    // 4. Handlers
-    const handleTabChange = (tab: string) => { 
-        const params = new URLSearchParams(searchParams.toString());
-        params.set('tab', tab);
-        router.push(`${pathname}?${params.toString()}`, { scroll: false });
-        setSelectedSubject(null); // Clear subject view when navigating via sidebar
+    // 4. Handlers (Optimized for instant 60fps responsiveness)
+    const handleTabChange = useCallback((tab: string) => { 
+        setActiveTab(tab);
+        setSelectedSubject(null);
         setIsMobileMenuOpen(false); 
-    };
+        if (typeof window !== 'undefined') {
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.set('tab', tab);
+            window.history.replaceState(null, '', currentUrl.toString());
+        }
+    }, []);
     const handleLogout = () => { localStorage.clear(); router.push("/"); };
 
     const handleDeleteAccount = async () => {
@@ -422,9 +432,7 @@ export default function StudentDashboard() {
             <aside className="dashboard-sidebar">
                 <div className="sidebar-branding">
                     <Link href="/" className="sidebar-brand-link">
-                        <div className="sidebar-logo-glass-pod">
-                            <Image src="/logo-icon.svg" alt="MSR Insight logo" width={24} height={24} priority className="sidebar-logo-img" />
-                        </div>
+                        <Image src="/logo-icon.svg" alt="MSR Insight logo" width={30} height={30} priority className="sidebar-plain-logo-img" />
                         <span className="sidebar-app-name">MSR Insight</span>
                     </Link>
                 </div>
@@ -455,9 +463,7 @@ export default function StudentDashboard() {
             {/* Mobile Top Navbar */}
             <header className="mobile-top-navbar">
                 <div className="mobile-nav-brand">
-                    <div className="sidebar-logo-glass-pod mobile">
-                        <Image src="/logo-icon.svg" alt="MSR Insight logo" width={20} height={20} priority className="sidebar-logo-img" />
-                    </div>
+                    <Image src="/logo-icon.svg" alt="MSR Insight logo" width={26} height={26} priority className="sidebar-plain-logo-img mobile" />
                     <span className="mobile-app-name">MSR Insight</span>
                 </div>
                 <div className="mobile-nav-profile" style={{ position: 'relative' }} ref={mobileProfileRef}>
@@ -642,9 +648,7 @@ export default function StudentDashboard() {
                 <div className="glass-ios-prompt">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <div className="sidebar-logo-glass-pod mobile">
-                                <Image src="/logo-icon.svg" alt="logo" width={20} height={20} className="sidebar-logo-img" />
-                            </div>
+                            <Image src="/logo-icon.svg" alt="logo" width={24} height={24} className="sidebar-plain-logo-img mobile" />
                             <span style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-primary)' }}>Install MSR Insight</span>
                         </div>
                         <button 
@@ -670,12 +674,18 @@ export default function StudentDashboard() {
             )}
 
             {showDeleteModal && (
-                <div className="glass-modal-overlay" onClick={() => setShowDeleteModal(false)}>
-                    <div className="glass-modal-card" onClick={(e) => e.stopPropagation()}>
+                <div className="glass-modal-overlay">
+                    <button 
+                        type="button" 
+                        className="glass-modal-backdrop-btn" 
+                        aria-label="Close delete modal backdrop"
+                        onClick={() => setShowDeleteModal(false)} 
+                    />
+                    <div className="glass-modal-card" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
                         <div className="glass-modal-icon-pod">
                             <Trash2 size={24} />
                         </div>
-                        <h3 className="glass-modal-title">
+                        <h3 id="delete-modal-title" className="glass-modal-title">
                             Are you leaving us like that?
                         </h3>
                         <p className="glass-modal-desc">

@@ -338,4 +338,4 @@ const SimulatorSection: React.FC<SimulatorSectionProps> = ({
     );
 };
 
-export default SimulatorSection;
+export default React.memo(SimulatorSection);

@@ -38,88 +38,78 @@ class DataNormalizer {
         return false;
     }
 
-    static normalizeStudentRecord(scrapedRecord: any): any {
-        const currentSem = scrapedRecord.current_semester || [];
-        const normalizedSubjects: any[] = [];
+    static normalizeAttendance(attDetails: any) {
+        const details = attDetails || {};
+        const present = Number.parseInt(details.present_classes || 0, 10);
+        const absent = Number.parseInt(details.absent_classes || 0, 10);
+        const remaining = Number.parseInt(details.still_to_go || 0, 10);
+        
+        const classesDetails = details.classes || {};
+        const total = present + absent;
+        const percentage = total > 0 ? Math.round((present / total) * 100) : 0;
+        
+        return {
+            present,
+            absent,
+            remaining,
+            percentage,
+            present_dates: classesDetails.present_dates || [],
+            absent_dates: classesDetails.absent_dates || []
+        };
+    }
 
-        for (const entry of currentSem) {
-            const subjectCode = entry.code || "N/A";
-            const subjectName = entry.name || "Unknown Subject";
+    static normalizeAssessments(rawTests: any[]) {
+        const assessments: any[] = [];
+        for (const t of rawTests || []) {
+            const stdType = this.standardizeAssessmentType(t.test_name || "");
+            if (!stdType || !this.isValidNumeric(t.marks_obtained)) continue;
             
-            // Attendance Object
-            const attDetails = entry.attendance_details || {};
-            const present = Number.parseInt(attDetails.present_classes || 0, 10);
-            const absent = Number.parseInt(attDetails.absent_classes || 0, 10);
-            const remaining = Number.parseInt(attDetails.still_to_go || 0, 10);
-            
-            const classesDetails = attDetails.classes || {};
-            const presentDates = classesDetails.present_dates || [];
-            const absentDates = classesDetails.absent_dates || [];
-            
-            const total = present + absent;
-            const percentage = total > 0 ? Math.round((present / total) * 100) : 0;
-            
-            const attendanceObj = {
-                present,
-                absent,
-                remaining,
-                percentage,
-                present_dates: presentDates,
-                absent_dates: absentDates
-            };
-            
-            // Assessments
-            const cieDetails = entry.cie_details || {};
-            const rawTests = cieDetails.tests || [];
-            const assessments: any[] = [];
-
-            for (const t of rawTests) {
-                const stdType = this.standardizeAssessmentType(t.test_name || "");
-                if (!stdType) continue;
-                
-                const obtained = t.marks_obtained;
-                const classAvg = t.class_average || 0;
-                
-                if (!this.isValidNumeric(obtained)) continue;
-                
-                const obtainedVal = parseFloat(obtained);
-                const classAvgVal = this.isValidNumeric(classAvg) ? parseFloat(classAvg) : 0.0;
-                
-                assessments.push({
-                    type: stdType,
-                    obtained_marks: obtainedVal,
-                    class_average: classAvgVal
-                });
-            }
-            
-            // Calculate Total Marks
-            const getVal = (tType: string): number => {
-                const a = assessments.find(x => x.type === tType);
-                if (a) {
-                    const val = parseFloat(a.obtained_marks);
-                    return !Number.isNaN(val) ? val : 0.0;
-                }
-                return 0.0;
-            };
-
-            const valT1 = getVal("T1");
-            const valT2 = getVal("T2");
-            const valAq1 = getVal("AQ1");
-            const valAq2 = getVal("AQ2");
-
-            const testAvg = (valT1 > 0 && valT2 > 0) ? Math.round((valT1 + valT2) / 2) : Math.max(valT1, valT2);
-            const totalMarks = testAvg + valAq1 + valAq2;
-            
-            normalizedSubjects.push({
-                code: String(subjectCode),
-                name: String(subjectName),
-                marks: totalMarks,
-                attendance: percentage,
-                attendance_details: attendanceObj,
-                assessments: assessments
+            assessments.push({
+                type: stdType,
+                obtained_marks: parseFloat(t.marks_obtained),
+                class_average: this.isValidNumeric(t.class_average) ? parseFloat(t.class_average) : 0.0
             });
         }
+        return assessments;
+    }
 
+    static calculateTotalMarks(assessments: any[]): number {
+        const getVal = (tType: string): number => {
+            const a = assessments.find(x => x.type === tType);
+            if (a) {
+                const val = parseFloat(a.obtained_marks);
+                return !Number.isNaN(val) ? val : 0.0;
+            }
+            return 0.0;
+        };
+
+        const valT1 = getVal("T1");
+        const valT2 = getVal("T2");
+        const valAq1 = getVal("AQ1");
+        const valAq2 = getVal("AQ2");
+
+        const testAvg = (valT1 > 0 && valT2 > 0) ? Math.round((valT1 + valT2) / 2) : Math.max(valT1, valT2);
+        return testAvg + valAq1 + valAq2;
+    }
+
+    static normalizeSubjectEntry(entry: any) {
+        const attendanceObj = this.normalizeAttendance(entry.attendance_details);
+        const assessments = this.normalizeAssessments(entry.cie_details?.tests);
+        const totalMarks = this.calculateTotalMarks(assessments);
+
+        return {
+            code: String(entry.code || "N/A"),
+            name: String(entry.name || "Unknown Subject"),
+            marks: totalMarks,
+            attendance: attendanceObj.percentage,
+            attendance_details: attendanceObj,
+            assessments
+        };
+    }
+
+    static normalizeStudentRecord(scrapedRecord: any): any {
+        const currentSem = scrapedRecord.current_semester || [];
+        const normalizedSubjects = currentSem.map((entry: any) => this.normalizeSubjectEntry(entry));
         const classDetails = scrapedRecord.class_details || "";
         const currentYear = DataNormalizer.deriveCurrentYearFromClassDetails(classDetails);
 
@@ -462,6 +452,62 @@ const sharedHttpsAgent = new https.Agent({
 });
 
 // ---- Scraping Logic ----
+async function handleSecondaryVerification(
+    page: any,
+    authType?: string,
+    last4Digits?: string
+): Promise<void> {
+    const hasSelect = await page.$('#id-type-select, select[name="idType"]').catch(() => null);
+    const hasDigits = await page.$('.digit-input, #enteredid').catch(() => null);
+
+    if (!((hasSelect || hasDigits) && last4Digits)) {
+        return;
+    }
+
+    if (hasSelect) {
+        await page.evaluate((targetAuthType: string) => {
+            const sel = document.querySelector('#id-type-select, select[name="idType"]') as HTMLSelectElement;
+            if (sel) {
+                const cleanTarget = (targetAuthType || '').toLowerCase();
+                let targetValue = '1';
+                if (cleanTarget.includes('mother') || cleanTarget === '2') {
+                    targetValue = '2';
+                } else if (cleanTarget.includes('abc') || cleanTarget === '3') {
+                    targetValue = '3';
+                }
+                sel.value = targetValue;
+                sel.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }, authType || '');
+    }
+
+    await page.evaluate((digits: string) => {
+        const inputs = Array.from(document.querySelectorAll('.digit-input')) as HTMLInputElement[];
+        const cleanDigits = String(digits).replace(/\D/g, '');
+        
+        for (let i = 0; i < inputs.length && i < cleanDigits.length; i++) {
+            inputs[i].value = cleanDigits[i];
+            inputs[i].dispatchEvent(new Event('input', { bubbles: true }));
+            inputs[i].dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        
+        const hiddenField = document.getElementById('enteredid') as HTMLInputElement;
+        if (hiddenField) {
+            hiddenField.value = cleanDigits;
+        }
+    }, last4Digits);
+
+    await Promise.all([
+        page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => {}),
+        page.evaluate(() => {
+            const btn = document.querySelector('#btn-submit, input[type="submit"], button[type="submit"]') as HTMLElement;
+            if (btn) btn.click();
+        })
+    ]);
+
+    await page.waitForSelector('a[href*="logout"], .dash_od_row, table', { timeout: 8000 }).catch(() => {});
+}
+
 async function performPortalLogin(
     page: any,
     usn: string,
@@ -507,58 +553,11 @@ async function performPortalLogin(
 
     // Check if secondary verification form is required
     if (!isDashboardUrl && !hasLogout) {
-        const hasSelect = await page.$('#id-type-select, select[name="idType"]').catch(() => null);
-        const hasDigits = await page.$('.digit-input, #enteredid').catch(() => null);
-
-        if ((hasSelect || hasDigits) && last4Digits) {
-            if (hasSelect) {
-                await page.evaluate((targetAuthType: string) => {
-                    const sel = document.querySelector('#id-type-select, select[name="idType"]') as HTMLSelectElement;
-                    if (sel) {
-                        const cleanTarget = (targetAuthType || '').toLowerCase();
-                        let targetValue = '1';
-                        if (cleanTarget.includes('mother') || cleanTarget === '2') {
-                            targetValue = '2';
-                        } else if (cleanTarget.includes('abc') || cleanTarget === '3') {
-                            targetValue = '3';
-                        }
-                        sel.value = targetValue;
-                        sel.dispatchEvent(new Event('change', { bubbles: true }));
-                    }
-                }, authType || '');
-            }
-
-            await page.evaluate((digits: string) => {
-                const inputs = Array.from(document.querySelectorAll('.digit-input')) as HTMLInputElement[];
-                const cleanDigits = String(digits).replace(/\D/g, '');
-                
-                for (let i = 0; i < inputs.length && i < cleanDigits.length; i++) {
-                    inputs[i].value = cleanDigits[i];
-                    inputs[i].dispatchEvent(new Event('input', { bubbles: true }));
-                    inputs[i].dispatchEvent(new Event('change', { bubbles: true }));
-                }
-                
-                const hiddenField = document.getElementById('enteredid') as HTMLInputElement;
-                if (hiddenField) {
-                    hiddenField.value = cleanDigits;
-                }
-            }, last4Digits);
-
-            await Promise.all([
-                page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => {}),
-                page.evaluate(() => {
-                    const btn = document.querySelector('#btn-submit, input[type="submit"], button[type="submit"]') as HTMLElement;
-                    if (btn) btn.click();
-                })
-            ]);
-
-            await page.waitForSelector('a[href*="logout"], .dash_od_row, table', { timeout: 8000 }).catch(() => {});
-
-            currentUrl = page.url();
-            content = await page.content();
-            hasLogout = content.toUpperCase().includes("LOGOUT");
-            isDashboardUrl = currentUrl.toLowerCase().includes("dashboard") || currentUrl.toLowerCase().includes("ksign");
-        }
+        await handleSecondaryVerification(page, authType, last4Digits);
+        currentUrl = page.url();
+        content = await page.content();
+        hasLogout = content.toUpperCase().includes("LOGOUT");
+        isDashboardUrl = currentUrl.toLowerCase().includes("dashboard") || currentUrl.toLowerCase().includes("ksign");
     }
 
     if (!isDashboardUrl && !hasLogout) {
@@ -568,11 +567,35 @@ async function performPortalLogin(
     return content;
 }
 
-async function fetchSubPagesInParallel(cookieString: string, content: string) {
-    const scrapedData: any = { dashboard: content, attendance: {}, cie: {} };
-    const $dash = cheerio.load(content);
-    const courseRows = extractCourseRowsFromDashboard($dash);
+const assignTargetData = (scrapedData: any, type: string, courseCode: string, html: string) => {
+    switch (type) {
+        case "exams":
+            scrapedData.exams = html;
+            break;
+        case "attendance":
+            scrapedData.attendance[courseCode] = html;
+            break;
+        case "cie":
+            scrapedData.cie[courseCode] = html;
+            break;
+        case "placement_eligibility":
+            scrapedData.placementEligibility = html;
+            break;
+        case "placement_status":
+            scrapedData.placementStatus = html;
+            break;
+        case "placement_results":
+            scrapedData.placementResults = html;
+            break;
+        case "placement_profile":
+            scrapedData.placementProfile = html;
+            break;
+        default:
+            break;
+    }
+};
 
+const buildSubPageUrlTargets = (courseRows: Course[]): Map<string, any[]> => {
     const urlToTargets = new Map<string, any[]>();
     const pushTarget = (href: string, courseCode: string, type: string) => {
         const url = resolveParentsUrl(href);
@@ -586,18 +609,26 @@ async function fetchSubPagesInParallel(cookieString: string, content: string) {
         if (row.cieLink) pushTarget(row.cieLink, row.code, "cie");
     }
 
-    const examsUrl = "https://parents.msrit.edu/newparents/index.php?option=com_history&task=getResult";
-    urlToTargets.set(examsUrl, [{ courseCode: "EXAMS", type: "exams" }]);
+    const fixedTargets: Array<[string, string, string]> = [
+        ["https://parents.msrit.edu/newparents/index.php?option=com_history&task=getResult", "EXAMS", "exams"],
+        ["https://parents.msrit.edu/newparents/index.php?option=com_placement&controller=placement&task=placementeligibility", "PLACEMENT", "placement_eligibility"],
+        ["https://parents.msrit.edu/newparents/index.php?option=com_placement&controller=placement&task=placementstatus", "PLACEMENT", "placement_status"],
+        ["https://parents.msrit.edu/newparents/index.php?option=com_placement&controller=placement&task=placementresults", "PLACEMENT", "placement_results"],
+        ["https://parents.msrit.edu/newparents/index.php?option=com_placement&controller=placement&task=getBasicprofiledetails", "PLACEMENT", "placement_profile"],
+    ];
 
-    const placementEligibilityUrl = "https://parents.msrit.edu/newparents/index.php?option=com_placement&controller=placement&task=placementeligibility";
-    const placementStatusUrl = "https://parents.msrit.edu/newparents/index.php?option=com_placement&controller=placement&task=placementstatus";
-    const placementResultsUrl = "https://parents.msrit.edu/newparents/index.php?option=com_placement&controller=placement&task=placementresults";
-    const placementProfileUrl = "https://parents.msrit.edu/newparents/index.php?option=com_placement&controller=placement&task=getBasicprofiledetails";
+    for (const [url, courseCode, type] of fixedTargets) {
+        urlToTargets.set(url, [{ courseCode, type }]);
+    }
 
-    urlToTargets.set(placementEligibilityUrl, [{ courseCode: "PLACEMENT", type: "placement_eligibility" }]);
-    urlToTargets.set(placementStatusUrl, [{ courseCode: "PLACEMENT", type: "placement_status" }]);
-    urlToTargets.set(placementResultsUrl, [{ courseCode: "PLACEMENT", type: "placement_results" }]);
-    urlToTargets.set(placementProfileUrl, [{ courseCode: "PLACEMENT", type: "placement_profile" }]);
+    return urlToTargets;
+};
+
+async function fetchSubPagesInParallel(cookieString: string, content: string) {
+    const scrapedData: any = { dashboard: content, attendance: {}, cie: {} };
+    const $dash = cheerio.load(content);
+    const courseRows = extractCourseRowsFromDashboard($dash);
+    const urlToTargets = buildSubPageUrlTargets(courseRows);
 
     const axiosInstance = axios.create({
         timeout: 10000,
@@ -624,13 +655,7 @@ async function fetchSubPagesInParallel(cookieString: string, content: string) {
     for (const [url, targets] of urlToTargets) {
         const html = htmlByUrl.get(url) ?? "";
         for (const t of targets) {
-            if (t.type === "exams") scrapedData.exams = html;
-            else if (t.type === "attendance") scrapedData.attendance[t.courseCode] = html;
-            else if (t.type === "cie") scrapedData.cie[t.courseCode] = html;
-            else if (t.type === "placement_eligibility") scrapedData.placementEligibility = html;
-            else if (t.type === "placement_status") scrapedData.placementStatus = html;
-            else if (t.type === "placement_results") scrapedData.placementResults = html;
-            else if (t.type === "placement_profile") scrapedData.placementProfile = html;
+            assignTargetData(scrapedData, t.type, t.courseCode, html);
         }
     }
 

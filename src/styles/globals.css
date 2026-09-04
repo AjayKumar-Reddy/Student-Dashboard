@@ -36,7 +36,7 @@
   --glass-border-hover: rgba(255, 255, 255, 0.20);
   --glass-border-glow: rgba(0, 173, 181, 0.20);
   --glass-shine: inset 0 1px 1px 0 rgba(255, 255, 255, 0.14), inset 0 0 16px 0 rgba(255, 255, 255, 0.02);
-  --glass-blur: blur(20px) saturate(190%) contrast(102%);
+  --glass-blur: blur(12px) saturate(160%);
   --glass-shadow: 0 12px 36px -4px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.25);
   --glass-shadow-hover: 0 16px 36px -4px rgba(0, 0, 0, 0.5), 0 0 12px rgba(0, 173, 181, 0.08);
 
@@ -70,6 +70,10 @@
   padding: 0;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 html,
 body {
   margin: 0;
@@ -83,13 +87,23 @@ body {
 body {
   min-height: 100vh;
   background-color: var(--bg-primary);
+  overflow-y: auto;
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
   background-image: 
     radial-gradient(circle at 12% 15%, rgba(2, 132, 199, 0.06) 0%, transparent 45%),
     radial-gradient(circle at 88% 22%, rgba(99, 102, 241, 0.05) 0%, transparent 42%),
     radial-gradient(circle at 50% 85%, rgba(0, 173, 181, 0.04) 0%, transparent 50%);
-  background-attachment: fixed;
-  overflow-y: auto;
-  font-size: 15px;
+  transform: translateZ(0);
 }
 
 .app-wrapper {
@@ -1346,7 +1360,8 @@ p {
   border: 1px solid var(--glass-border) !important;
   border-radius: var(--radius-lg, 16px);
   box-shadow: var(--glass-shadow), var(--glass-shine);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease, box-shadow 0.2s ease;
+  transform: translateZ(0);
 }
 
 .glass-card:hover {

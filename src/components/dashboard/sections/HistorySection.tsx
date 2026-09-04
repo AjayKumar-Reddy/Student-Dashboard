@@ -111,4 +111,4 @@ const HistorySection: React.FC<HistorySectionProps> = ({
     );
 };
 
-export default HistorySection;
+export default React.memo(HistorySection);

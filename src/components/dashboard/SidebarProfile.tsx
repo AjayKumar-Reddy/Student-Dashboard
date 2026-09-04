@@ -131,11 +131,10 @@ const SidebarProfile: React.FC<SidebarProfileProps> = ({ user, onLogout, onDelet
       )}
 
       {/* Profile Card Trigger */}
-      <div
+      <button
+        type="button"
         className={`profile-card interactive ${showPopover ? "active" : ""}`}
         onClick={() => setShowPopover(!showPopover)}
-        role="button"
-        tabIndex={0}
         aria-expanded={showPopover}
         aria-label="Student profile and menu"
       >
@@ -176,7 +175,7 @@ const SidebarProfile: React.FC<SidebarProfileProps> = ({ user, onLogout, onDelet
             }}
           />
         </div>
-      </div>
+      </button>
     </div>
   );
 };
