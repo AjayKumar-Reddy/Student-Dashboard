@@ -91,7 +91,7 @@ const extractCtc = (text: string): string | null => {
 };
 
 const extractStatus = (text: string): string => {
-    const statusMatch = text.match(/(?:Status)[:\s]+([a-zA-Z\s]+)/i);
+    const statusMatch = text.match(/(?:Status)[:\s]+([a-z\s]+)/i);
     if (statusMatch) return statusMatch[1].trim();
     if (/under\s*progress/i.test(text)) return "Under Progress";
     if (/registered/i.test(text)) return "Registered";
@@ -100,6 +100,14 @@ const extractStatus = (text: string): string => {
     if (/selected/i.test(text)) return "Selected";
     if (/rejected/i.test(text)) return "Rejected";
     return "Open";
+};
+
+const getStatusColor = (status: string): string => {
+    const s = status.toLowerCase();
+    if (s.includes("progress")) return "#a78bfa";
+    if (s.includes("selected")) return "#10b981";
+    if (s.includes("rejected")) return "#ef4444";
+    return "var(--text-primary)";
 };
 
 // Parser to extract fields from unstructured Contineo scrapings
@@ -111,8 +119,8 @@ const parseEventData = (event: any): ParsedEvent => {
     return {
         company,
         type,
-        appliedDate: extractDateByPattern(allText, /(?:Applied\s+On|Applied\s+Date|Applied|Apply\s+Before)[:\s]+([a-zA-Z0-9\s/:-]+)/i),
-        eventDate: extractDateByPattern(allText, /(?:Event\s+Date|Date\s+of\s+Event|Event)[:\s]+([a-zA-Z0-9\s/:-]+)/i),
+        appliedDate: extractDateByPattern(allText, /(?:Applied\s+(?:On|Date)|Applied|Apply\s+Before)[:\s]+([^\n\r,;()]+)/i),
+        eventDate: extractDateByPattern(allText, /(?:Event\s+Date|Date\s+of\s+Event|Event)[:\s]+([^\n\r,;()]+)/i),
         ctc: extractCtc(allText),
         status: extractStatus(allText),
         actionLink: event.actionLink,
@@ -226,8 +234,6 @@ const PlacementSection: React.FC<PlacementSectionProps> = ({
                 </div>
             );
         }
-
-        const isInProgressCategory = typeLabel.toLowerCase().includes("progress");
 
         return (
             <div style={{ display: "flex", flexDirection: "column", gap: "24px", marginTop: "24px" }}>
@@ -408,7 +414,7 @@ const PlacementSection: React.FC<PlacementSectionProps> = ({
                                 {events.map((event, idx) => {
                                     const parsed = parseEventData(event);
                                     return (
-                                        <option key={idx} value={idx}>
+                                        <option key={event.id || `${parsed.company}-${parsed.status}-${idx}`} value={idx}>
                                             {parsed.company} ({parsed.status})
                                         </option>
                                     );
@@ -437,7 +443,7 @@ const PlacementSection: React.FC<PlacementSectionProps> = ({
 
                     return (
                         <div 
-                            key={idx} 
+                            key={event.id || `${parsed.company}-${parsed.eventDate || parsed.appliedDate || idx}`} 
                             className={`placement-event-item ${events.length <= 1 || selectedEventIndex === idx ? 'mobile-active' : ''}`}
                             style={{ 
                                 background: "var(--bg-card, #131A26)", 
@@ -530,9 +536,7 @@ const PlacementSection: React.FC<PlacementSectionProps> = ({
                                             <span style={{ 
                                                 fontSize: "15px", 
                                                 fontWeight: "800", 
-                                                color: parsed.status.toLowerCase().includes("progress") ? "#a78bfa" : 
-                                                       parsed.status.toLowerCase().includes("selected") ? "#10b981" : 
-                                                       parsed.status.toLowerCase().includes("rejected") ? "#ef4444" : "var(--text-primary)"
+                                                color: getStatusColor(parsed.status)
                                             }}>{parsed.status}</span>
                                         </div>
                                     </div>
@@ -979,7 +983,7 @@ const PlacementSection: React.FC<PlacementSectionProps> = ({
                                             transition: "all 0.2s ease"
                                         }}
                                     >
-                                        Active / Upcoming
+                                        <span>Active / Upcoming</span>
                                         <span style={{
                                             background: eligibilityFilter === "active" ? "var(--accent-primary, #00ADB5)" : "rgba(255,255,255,0.08)",
                                             color: eligibilityFilter === "active" ? "#fff" : "var(--text-primary)",
@@ -1008,7 +1012,7 @@ const PlacementSection: React.FC<PlacementSectionProps> = ({
                                             transition: "all 0.2s ease"
                                         }}
                                     >
-                                        Exhausted
+                                        <span>Exhausted</span>
                                         <span style={{
                                             background: eligibilityFilter === "exhausted" ? "#ef4444" : "rgba(255,255,255,0.08)",
                                             color: eligibilityFilter === "exhausted" ? "#fff" : "var(--text-primary)",
@@ -1033,4 +1037,4 @@ const PlacementSection: React.FC<PlacementSectionProps> = ({
     );
 };
 
-export default PlacementSection;
+export default React.memo(PlacementSection);

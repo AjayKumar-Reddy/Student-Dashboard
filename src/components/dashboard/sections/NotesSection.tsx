@@ -202,4 +202,4 @@ const NotesSection: React.FC<NotesSectionProps> = ({
     );
 };
 
-export default NotesSection;
+export default React.memo(NotesSection);

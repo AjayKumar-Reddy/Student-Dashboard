@@ -317,4 +317,4 @@ const PerformanceSection: React.FC<PerformanceSectionProps> = ({
     );
 };
 
-export default PerformanceSection;
+export default React.memo(PerformanceSection);
