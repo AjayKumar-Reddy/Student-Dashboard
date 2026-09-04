@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import axios from "axios";
 import {
-    Target, History as HistoryIcon, Award, Menu, X, Gamepad2, LogOut, BookOpen, Briefcase
+    Target, History as HistoryIcon, Award, Menu, X, Gamepad2, LogOut, BookOpen, Briefcase, Compass, Download, Trash2
 } from "lucide-react";
 import "@/styles/StudentDashboard.css";
 import { API_BASE_URL } from "@/config/api.config";
@@ -72,6 +72,22 @@ export default function StudentDashboard() {
     const [isDeleting, setIsDeleting] = useState(false);
     const [confirmUsnInput, setConfirmUsnInput] = useState("");
     const [showTour, setShowTour] = useState(false);
+    const mobileProfileRef = useRef<HTMLDivElement>(null);
+
+    // Close mobile profile dropdown on outside click
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (mobileProfileRef.current && !mobileProfileRef.current.contains(e.target as Node)) {
+                setShowMobileProfileMenu(false);
+            }
+        };
+        if (showMobileProfileMenu) {
+            document.addEventListener("mousedown", handleClickOutside);
+        }
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [showMobileProfileMenu]);
 
     const { formatTime, isCooldownActive } = useCooldown(nextAllowedAt);
 
@@ -405,8 +421,10 @@ export default function StudentDashboard() {
         <div className="student-dashboard-container">
             <aside className="dashboard-sidebar">
                 <div className="sidebar-branding">
-                    <Link href="/" className="flex items-center gap-2">
-                        <Image src="/logo-icon.svg" alt="logo" width={32} height={32} priority />
+                    <Link href="/" className="sidebar-brand-link">
+                        <div className="sidebar-logo-glass-pod">
+                            <Image src="/logo-icon.svg" alt="MSR Insight logo" width={24} height={24} priority className="sidebar-logo-img" />
+                        </div>
                         <span className="sidebar-app-name">MSR Insight</span>
                     </Link>
                 </div>
@@ -437,127 +455,78 @@ export default function StudentDashboard() {
             {/* Mobile Top Navbar */}
             <header className="mobile-top-navbar">
                 <div className="mobile-nav-brand">
-                    <Image src="/logo-icon.svg" alt="logo" width={28} height={28} priority />
+                    <div className="sidebar-logo-glass-pod mobile">
+                        <Image src="/logo-icon.svg" alt="MSR Insight logo" width={20} height={20} priority className="sidebar-logo-img" />
+                    </div>
                     <span className="mobile-app-name">MSR Insight</span>
                 </div>
-                <div className="mobile-nav-profile" style={{ position: 'relative' }}>
-                    <div 
-                        className="profile-initials-avatar" 
-                        style={{ width: 32, height: 32, fontSize: 12, cursor: 'pointer' }}
+                <div className="mobile-nav-profile" style={{ position: 'relative' }} ref={mobileProfileRef}>
+                    <button 
+                        type="button"
+                        className="mobile-avatar-trigger"
                         onClick={() => setShowMobileProfileMenu(!showMobileProfileMenu)}
+                        aria-label="Toggle profile menu"
                     >
-                        {student?.name?.charAt(0) || 'S'}
-                    </div>
+                        <div className="profile-initials-avatar mobile-avatar" style={{ width: 34, height: 34, fontSize: 13 }}>
+                            {student?.name?.charAt(0) || 'S'}
+                        </div>
+                        <span className="online-status-dot" />
+                    </button>
                     {showMobileProfileMenu && (
-                        <div className="mobile-profile-dropdown" style={{
-                            position: 'absolute',
-                            right: 0,
-                            top: '42px',
-                            background: 'var(--bg-card, #1B2333)',
-                            border: '1px solid var(--border-subtle, rgba(255, 255, 255, 0.08))',
-                            borderRadius: '12px',
-                            padding: '12px',
-                            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5)',
-                            minWidth: '180px',
-                            zIndex: 1001,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '10px'
-                        }}>
-                            <div style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '8px' }}>
-                                <div style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--text-primary)' }}>{student?.name}</div>
-                                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{student?.usn}</div>
+                        <div className="mobile-profile-dropdown">
+                            <div className="dropdown-student-header">
+                                <div className="dropdown-student-avatar">
+                                    {student?.name?.charAt(0) || 'S'}
+                                </div>
+                                <div className="dropdown-student-info">
+                                    <div className="dropdown-student-name">{student?.name}</div>
+                                    <div className="dropdown-student-usn">{student?.usn}</div>
+                                    <div className="dropdown-student-status">Active Student</div>
+                                </div>
                             </div>
+                            <div className="dropdown-divider" />
                             <button
                                 type="button"
+                                className="dropdown-glass-btn tour"
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     setShowMobileProfileMenu(false);
                                     setShowTour(true);
                                 }}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    width: '100%',
-                                    padding: '8px 10px',
-                                    background: 'rgba(0, 173, 181, 0.1)',
-                                    color: '#00ADB5',
-                                    border: '1px solid rgba(0, 173, 181, 0.2)',
-                                    borderRadius: '8px',
-                                    fontSize: '13px',
-                                    fontWeight: 600,
-                                    cursor: 'pointer'
-                                }}
                             >
-                                Replay Tour
+                                <Compass size={16} />
+                                <span>Replay Tour</span>
                             </button>
                             {isInstallable && (
                                 <button 
                                     type="button"
+                                    className="dropdown-glass-btn install"
                                     onClick={handleInstallPWA}
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '8px',
-                                        width: '100%',
-                                        padding: '8px 10px',
-                                        background: 'rgba(0, 173, 181, 0.1)',
-                                        color: '#00ADB5',
-                                        border: '1px solid rgba(0, 173, 181, 0.2)',
-                                        borderRadius: '8px',
-                                        fontSize: '13px',
-                                        fontWeight: 600,
-                                        cursor: 'pointer'
-                                    }}
                                 >
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m8 17 4 4 4-4"/></svg>
-                                    Install Web App
+                                    <Download size={16} />
+                                    <span>Install Web App</span>
                                 </button>
                             )}
                             <button 
                                 type="button"
+                                className="dropdown-glass-btn logout"
                                 onClick={handleLogout}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    width: '100%',
-                                    padding: '8px 10px',
-                                    background: 'rgba(239, 68, 68, 0.1)',
-                                    color: '#EF4444',
-                                    border: '1px solid rgba(239, 68, 68, 0.2)',
-                                    borderRadius: '8px',
-                                    fontSize: '13px',
-                                    fontWeight: 600,
-                                    cursor: 'pointer'
+                            >
+                                <LogOut size={16} />
+                                <span>Logout</span>
+                            </button>
+                            <div className="dropdown-divider" />
+                            <button
+                                type="button"
+                                className="dropdown-glass-btn delete"
+                                onClick={() => {
+                                    setShowMobileProfileMenu(false);
+                                    setShowDeleteModal(true);
                                 }}
                             >
-                                <LogOut size={16} /> Logout
+                                <Trash2 size={15} />
+                                <span>Delete Account</span>
                             </button>
-                            <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', marginTop: '4px', paddingTop: '8px', textAlign: 'center' }}>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setShowMobileProfileMenu(false);
-                                        setShowDeleteModal(true);
-                                    }}
-                                    style={{
-                                        background: 'transparent',
-                                        border: 'none',
-                                        color: 'var(--text-muted, #94a3b8)',
-                                        fontSize: '11px',
-                                        fontWeight: '600',
-                                        cursor: 'pointer',
-                                        textDecoration: 'underline',
-                                        width: '100%',
-                                        textAlign: 'center',
-                                        padding: '4px 0'
-                                    }}
-                                >
-                                    Delete Account
-                                </button>
-                            </div>
                         </div>
                     )}
                 </div>
@@ -670,28 +639,13 @@ export default function StudentDashboard() {
             </nav>
 
             {showIOSPrompt && (
-                <div className="ios-pwa-prompt" style={{
-                    position: 'fixed',
-                    bottom: '80px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    background: 'var(--bg-card, #1B2333)',
-                    border: '1px solid var(--accent-primary, #00ADB5)',
-                    borderRadius: '16px',
-                    padding: '16px',
-                    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.5)',
-                    width: 'calc(100% - 32px)',
-                    maxWidth: '400px',
-                    zIndex: 2000,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '12px',
-                    animation: 'slideUp 0.3s ease-out'
-                }}>
+                <div className="glass-ios-prompt">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <Image src="/logo-icon.svg" alt="logo" width={24} height={24} />
-                            <span style={{ fontWeight: 'bold', fontSize: '14px', color: 'var(--text-primary)' }}>Install MSR Insight</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div className="sidebar-logo-glass-pod mobile">
+                                <Image src="/logo-icon.svg" alt="logo" width={20} height={20} className="sidebar-logo-img" />
+                            </div>
+                            <span style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-primary)' }}>Install MSR Insight</span>
                         </div>
                         <button 
                             type="button"
@@ -699,14 +653,15 @@ export default function StudentDashboard() {
                                 setShowIOSPrompt(false);
                                 localStorage.setItem("dismissedIOSInstallPrompt", "true");
                             }}
-                            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+                            className="profile-options-trigger"
+                            aria-label="Close install prompt"
                         >
                             <X size={16} />
                         </button>
                     </div>
-                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
+                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
                         To install this app on your iPhone:
-                        <ol style={{ paddingLeft: '20px', margin: '6px 0 0 0' }}>
+                        <ol style={{ paddingLeft: '20px', margin: '8px 0 0 0', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             <li>Tap the <strong>Share</strong> button <svg style={{ display: 'inline', verticalAlign: 'middle' }} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg> at the bottom.</li>
                             <li>Select <strong>Add to Home Screen</strong> <svg style={{ display: 'inline', verticalAlign: 'middle' }} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>.</li>
                         </ol>
@@ -715,35 +670,15 @@ export default function StudentDashboard() {
             )}
 
             {showDeleteModal && (
-                <div style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: 'rgba(0, 0, 0, 0.85)',
-                    backdropFilter: 'blur(8px)',
-                    zIndex: 2000,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '20px'
-                }}>
-                    <div style={{
-                        background: 'var(--bg-card, #131A26)',
-                        border: '1px solid rgba(239, 68, 68, 0.2)',
-                        borderRadius: '16px',
-                        padding: '30px',
-                        maxWidth: '420px',
-                        width: '100%',
-                        textAlign: 'center',
-                        boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
-                        animation: 'fadeIn 0.2s ease'
-                    }}>
-                        <h3 style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--text-primary)', margin: '0 0 10px 0' }}>
+                <div className="glass-modal-overlay" onClick={() => setShowDeleteModal(false)}>
+                    <div className="glass-modal-card" onClick={(e) => e.stopPropagation()}>
+                        <div className="glass-modal-icon-pod">
+                            <Trash2 size={24} />
+                        </div>
+                        <h3 className="glass-modal-title">
                             Are you leaving us like that?
                         </h3>
-                        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.5', margin: '0 0 20px 0' }}>
+                        <p className="glass-modal-desc">
                             All your academic logs, simulated grades, and placement records will be permanently erased. To confirm deletion, type your USN (<strong>{stdUsn}</strong>) below:
                         </p>
                         <input
@@ -751,37 +686,15 @@ export default function StudentDashboard() {
                             value={confirmUsnInput}
                             onChange={(e) => setConfirmUsnInput(e.target.value)}
                             placeholder="Enter USN to confirm"
-                            style={{
-                                width: '100%',
-                                padding: '10px 14px',
-                                background: 'var(--bg-secondary, #1B2333)',
-                                border: '1px solid var(--border-subtle, rgba(255, 255, 255, 0.08))',
-                                borderRadius: '10px',
-                                color: 'var(--text-primary)',
-                                outline: 'none',
-                                textAlign: 'center',
-                                fontSize: '14px',
-                                fontWeight: 'bold',
-                                letterSpacing: '1px',
-                                marginBottom: '20px'
-                            }}
+                            className="glass-modal-input"
+                            autoFocus
                         />
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div className="glass-modal-actions">
                             <button 
                                 type="button"
                                 onClick={handleDeleteAccount}
                                 disabled={isDeleting || confirmUsnInput.trim().toUpperCase() !== stdUsn.toUpperCase()}
-                                style={{
-                                    width: '100%',
-                                    padding: '12px',
-                                    background: confirmUsnInput.trim().toUpperCase() === stdUsn.toUpperCase() ? '#EF4444' : 'rgba(239, 68, 68, 0.2)',
-                                    color: confirmUsnInput.trim().toUpperCase() === stdUsn.toUpperCase() ? '#fff' : 'rgba(255, 255, 255, 0.3)',
-                                    border: 'none',
-                                    borderRadius: '10px',
-                                    fontWeight: 'bold',
-                                    cursor: (isDeleting || confirmUsnInput.trim().toUpperCase() !== stdUsn.toUpperCase()) ? 'not-allowed' : 'pointer',
-                                    transition: 'all 0.2s'
-                                }}
+                                className="glass-modal-btn danger"
                             >
                                 {isDeleting ? "Erasing everything..." : "Yes, delete permanently"}
                             </button>
@@ -792,17 +705,7 @@ export default function StudentDashboard() {
                                     setConfirmUsnInput("");
                                 }}
                                 disabled={isDeleting}
-                                style={{
-                                    width: '100%',
-                                    padding: '12px',
-                                    background: 'var(--bg-secondary, #1B2333)',
-                                    color: 'var(--text-primary)',
-                                    border: '1px solid var(--border-subtle, rgba(255, 255, 255, 0.08))',
-                                    borderRadius: '10px',
-                                    fontWeight: 'bold',
-                                    cursor: isDeleting ? 'not-allowed' : 'pointer',
-                                    transition: 'all 0.2s'
-                                }}
+                                className="glass-modal-btn secondary"
                             >
                                 Nevermind, keep my data
                             </button>

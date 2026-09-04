@@ -1,10 +1,115 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
-  <!-- Iso cube outer shell -->
-  <polygon points="256,40 440,146 440,366 256,472 72,366 72,146" stroke="#F8FAFC" stroke-width="36" stroke-linejoin="round"/>
-  <!-- Connecting nodes -->
-  <line x1="256" y1="40" x2="256" y2="256" stroke="#F8FAFC" stroke-width="36" stroke-linecap="round" stroke-opacity="0.4"/>
-  <line x1="440" y1="366" x2="256" y2="256" stroke="#F8FAFC" stroke-width="36" stroke-linecap="round" stroke-opacity="0.4"/>
-  <line x1="72" y1="366" x2="256" y2="256" stroke="#F8FAFC" stroke-width="36" stroke-linecap="round" stroke-opacity="0.4"/>
-  <!-- AI Core -->
-  <circle cx="256" cy="256" r="56" fill="#FF8A00"/>
+  <defs>
+    <!-- Background Ambient Glow -->
+    <radialGradient id="iconBgGlow" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" stop-color="#0284C7" stop-opacity="0.35" />
+      <stop offset="60%" stop-color="#6366F1" stop-opacity="0.1" />
+      <stop offset="100%" stop-color="#080C14" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Cap & Crest Primary Gradient -->
+    <linearGradient id="capGrad" x1="64" y1="120" x2="448" y2="280" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#38BDF8" />
+      <stop offset="45%" stop-color="#00ADB5" />
+      <stop offset="100%" stop-color="#2563EB" />
+    </linearGradient>
+
+    <!-- Book Pages Radiant Gradient -->
+    <linearGradient id="pagesGrad" x1="120" y1="280" x2="392" y2="440" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#00E5FF" />
+      <stop offset="50%" stop-color="#38BDF8" />
+      <stop offset="100%" stop-color="#818CF8" />
+    </linearGradient>
+
+    <!-- Gold Tassel & Star of Excellence Gradient -->
+    <linearGradient id="goldGrad" x1="380" y1="180" x2="440" y2="340" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FDE047" />
+      <stop offset="50%" stop-color="#F59E0B" />
+      <stop offset="100%" stop-color="#D97706" />
+    </linearGradient>
+
+    <!-- Glass Specular Highlight -->
+    <linearGradient id="shineGrad" x1="100" y1="80" x2="300" y2="240" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.6" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0" />
+    </linearGradient>
+
+    <!-- Subtle Drop Shadow -->
+    <filter id="capShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#00ADB5" flood-opacity="0.3" />
+    </filter>
+  </defs>
+
+  <!-- Ambient Glow Behind Emblem -->
+  <circle cx="256" cy="256" r="230" fill="url(#iconBgGlow)" />
+
+  <!-- === ACADEMIC MORTARBOARD (GRADUATION CAP) === -->
+  <!-- Mortarboard Diamond Top Shell -->
+  <polygon 
+    points="256,76 456,168 256,260 56,168" 
+    fill="url(#capGrad)" 
+    filter="url(#capShadow)"
+  />
+
+  <!-- Mortarboard Diamond Top Specular Highlight Edge -->
+  <polygon 
+    points="256,76 456,168 256,180 56,168" 
+    fill="url(#shineGrad)" 
+  />
+
+  <!-- Mortarboard Skullcap / Base Band -->
+  <path 
+    d="M136,205 L136,276 C136,336 376,336 376,276 L376,205 C336,242 280,256 256,256 C232,256 176,242 136,205 Z" 
+    fill="#0F172A" 
+    stroke="url(#capGrad)" 
+    stroke-width="8" 
+    stroke-linejoin="round"
+  />
+
+  <!-- Cap Button / Center Pivot -->
+  <ellipse cx="256" cy="168" rx="14" ry="10" fill="#F8FAFC" />
+
+  <!-- Cap Tassel Ribbon & Hanging Ornament -->
+  <path 
+    d="M256,168 Q360,172 384,232 L392,324" 
+    stroke="url(#goldGrad)" 
+    stroke-width="10" 
+    stroke-linecap="round" 
+    fill="none" 
+  />
+  <!-- Tassel Brush / Fringe -->
+  <polygon points="384,320 400,320 404,364 380,364" fill="url(#goldGrad)" />
+  <circle cx="392" cy="322" r="6" fill="#FDE047" />
+
+  <!-- === OPEN KNOWLEDGE BOOK (PORTAL OF INSIGHT) === -->
+  <!-- Left Wing / Page Spread -->
+  <path 
+    d="M256,330 C204,296 112,298 72,316 C62,320 56,329 56,340 L56,412 C56,423 66,432 77,430 C122,416 208,416 256,444 Z" 
+    fill="url(#pagesGrad)" 
+    opacity="0.95"
+  />
+
+  <!-- Right Wing / Page Spread -->
+  <path 
+    d="M256,330 C308,296 400,298 440,316 C450,320 456,329 456,340 L456,412 C456,423 446,432 435,430 C390,416 304,416 256,444 Z" 
+    fill="url(#pagesGrad)" 
+    opacity="0.95"
+  />
+
+  <!-- Book Spine Center Light Pillar -->
+  <line x1="256" y1="324" x2="256" y2="446" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round" />
+
+  <!-- Subtle Inner Page Lines (Left) -->
+  <path d="M96,342 C136,330 200,332 236,352" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" opacity="0.6" />
+  <path d="M96,370 C136,358 200,360 236,380" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" opacity="0.45" />
+
+  <!-- Subtle Inner Page Lines (Right) -->
+  <path d="M416,342 C376,330 312,332 276,352" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" opacity="0.6" />
+  <path d="M416,370 C376,358 312,360 276,380" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" opacity="0.45" />
+
+  <!-- === BEACON / STAR OF EXCELLENCE AT CREST TOP === -->
+  <g transform="translate(256, 76)">
+    <circle cx="0" cy="0" r="10" fill="#FFFFFF" />
+    <polygon points="0,-18 5,-5 18,0 5,5 0,18 -5,5 -18,0 -5,-5" fill="url(#goldGrad)" />
+  </g>
 </svg>

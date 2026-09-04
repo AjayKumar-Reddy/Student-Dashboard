@@ -188,6 +188,9 @@ export default function StudentLogin() {
         <div className="login-page">
             <div className="login-card fade-in">
                 <header className="login-header">
+                    <div className="login-logo-container">
+                        <img src="/logo-icon.svg" alt="MSR Insight" width={48} height={48} className="login-logo" />
+                    </div>
                     <h1 className="login-title">Student Portal</h1>
                     <p className="login-subtitle">Sign in to access your reports</p>
                 </header>
@@ -298,26 +301,66 @@ export default function StudentLogin() {
                     justify-content: center;
                     align-items: center;
                     min-height: calc(100vh - var(--nav-height));
-                    background: var(--bg-primary);
+                    background: radial-gradient(circle at 50% 20%, rgba(2, 132, 199, 0.12) 0%, transparent 60%),
+                                radial-gradient(circle at 80% 80%, rgba(99, 102, 241, 0.10) 0%, transparent 50%),
+                                var(--bg-primary);
+                    padding: 24px;
                 }
                 .login-card {
-                    background: var(--bg-secondary);
-                    border: 1px solid var(--border-subtle);
-                    border-radius: var(--radius-lg);
+                    background: var(--glass-bg, rgba(17, 26, 44, 0.72));
+                    backdrop-filter: var(--glass-blur, blur(20px) saturate(190%));
+                    -webkit-backdrop-filter: var(--glass-blur, blur(20px) saturate(190%));
+                    border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.10));
+                    border-radius: var(--radius-lg, 16px);
                     padding: 40px;
                     width: 100%;
                     max-width: 440px;
-                    box-shadow: var(--shadow-lg);
+                    box-shadow: var(--glass-shadow), var(--glass-shine);
+                    position: relative;
+                    overflow: hidden;
+                }
+                .login-card::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    height: 1px;
+                    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
                 }
                 .login-header {
                     margin-bottom: 32px;
                     text-align: center;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                }
+                .login-logo-container {
+                    width: 64px;
+                    height: 64px;
+                    border-radius: 18px;
+                    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(15, 23, 42, 0.7) 100%);
+                    border: 1px solid rgba(255, 255, 255, 0.14);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin-bottom: 16px;
+                    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), 0 0 15px rgba(0, 173, 181, 0.2);
+                }
+                .login-logo {
+                    width: 42px;
+                    height: 42px;
+                    object-fit: contain;
                 }
                 .login-title {
                     font-size: 1.75rem;
                     font-weight: 800;
                     margin-bottom: 8px;
                     color: var(--text-primary);
+                    letter-spacing: -0.02em;
+                    background: linear-gradient(135deg, #FFFFFF 30%, #38BDF8 70%, #00ADB5 100%);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
                 }
                 .login-subtitle {
                     color: var(--text-secondary);
