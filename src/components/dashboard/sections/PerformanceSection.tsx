@@ -149,7 +149,7 @@ const PerformanceSection: React.FC<PerformanceSectionProps> = ({
                 <div className="stat-card anim-right">
                     <div className="stat-header">
                         <span className="stat-label">Latest semester SGPA</span>
-                        <TrendingUp className="stat-icon" />
+                        <TrendingUp size={18} />
                     </div>
                     <div className="stat-value">{examHistory.length > 0 ? latestSGPA : "—"}</div>
                     {examHistory.length > 1 ? (
