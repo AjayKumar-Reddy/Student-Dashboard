@@ -4,7 +4,7 @@ import React, { useEffect, useState, useMemo, useRef, useCallback } from "react"
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import axios from "axios";
 import {
-    Target, History as HistoryIcon, Award, Menu, X, Gamepad2, LogOut, BookOpen, Briefcase, Compass, Download, Trash2
+    Target, History as HistoryIcon, Award, Menu, X, Gamepad2, LogOut, BookOpen, Briefcase, Compass, Download, Trash2, Github
 } from "lucide-react";
 import "@/styles/StudentDashboard.css";
 import { API_BASE_URL } from "@/config/api.config";
@@ -533,6 +533,19 @@ export default function StudentDashboard() {
                                 <Trash2 size={15} />
                                 <span>Delete Account</span>
                             </button>
+                            <div className="profile-github-link-wrapper">
+                                <a
+                                    href="https://github.com/AjayKumar-Reddy"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="profile-github-link"
+                                    title="GitHub Profile"
+                                    aria-label="GitHub Profile"
+                                    onClick={() => setShowMobileProfileMenu(false)}
+                                >
+                                    <Github size={13} />
+                                </a>
+                            </div>
                         </div>
                     )}
                 </div>

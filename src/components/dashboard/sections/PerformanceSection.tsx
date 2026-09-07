@@ -29,7 +29,7 @@ const CHART_COLORS = [
 ];
 
 import { 
-    RadialBarChart, RadialBar, Tooltip, ResponsiveContainer, 
+    RadialBarChart, RadialBar, PolarAngleAxis, Tooltip, ResponsiveContainer, 
     BarChart, Bar, XAxis, YAxis, CartesianGrid 
 } from "recharts";
 
@@ -170,7 +170,7 @@ const PerformanceSection: React.FC<PerformanceSectionProps> = ({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
                 <div className="chart-card">
                     <div className="chart-header">
-                        <h3 className="chart-title">Attendence Overview</h3>
+                        <h3 className="chart-title">Attendance Overview</h3>
                         <p className="chart-subtitle">Subject-wise attendance distribution</p>
                     </div>
                     <div className="chart-body attendance-chart-body">
@@ -178,8 +178,33 @@ const PerformanceSection: React.FC<PerformanceSectionProps> = ({
                             <>
                                 <div className="chart-container">
                                     <ResponsiveContainer width="100%" height={380}>
-                                        <RadialBarChart cx="50%" cy="50%" innerRadius="25%" outerRadius="100%" barSize={12} data={currentSem.map((s: any, i: number) => ({ ...s, fill: CHART_COLORS[i % CHART_COLORS.length] }))}>
-                                            <RadialBar background={{ fill: 'var(--bg-primary)' }} dataKey="attendance" cornerRadius={20} onClick={(d: any) => onSelectSubject(d.payload)} />
+                                        <RadialBarChart 
+                                            cx="50%" 
+                                            cy="50%" 
+                                            innerRadius="25%" 
+                                            outerRadius="100%" 
+                                            barSize={12} 
+                                            data={currentSem.map((s: any, i: number) => ({ 
+                                                ...s, 
+                                                attendance: Math.round(Number(s.attendance) || 0),
+                                                fill: CHART_COLORS[i % CHART_COLORS.length] 
+                                            }))}
+                                            startAngle={90}
+                                            endAngle={-270}
+                                        >
+                                            <PolarAngleAxis 
+                                                type="number" 
+                                                domain={[0, 100]} 
+                                                angleAxisId={0} 
+                                                tick={false} 
+                                            />
+                                            <RadialBar 
+                                                background={{ fill: 'var(--bg-primary)' }} 
+                                                dataKey="attendance" 
+                                                cornerRadius={20} 
+                                                angleAxisId={0}
+                                                onClick={(d: any) => onSelectSubject(d.payload)} 
+                                            />
                                             <Tooltip content={<AttendanceTooltip />} cursor={{ fill: 'var(--bg-primary)' }} />
                                         </RadialBarChart>
                                     </ResponsiveContainer>

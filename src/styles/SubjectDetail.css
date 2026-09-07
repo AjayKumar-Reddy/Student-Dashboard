@@ -1134,14 +1134,17 @@
     font-size: 9px;
   }
 
-  .sd-assessment-table,
-  .sd-calculation-card {
+  .sd-assessment-table {
     display: none !important;
   }
 
-  .sd-assessment-table.sd-expanded,
-  .sd-calculation-card.sd-expanded {
+  .sd-assessment-table.sd-expanded {
     display: block !important;
+  }
+
+  .sd-calculation-card {
+    display: flex !important;
+    flex-direction: column !important;
   }
 
   .sd-toggle-btn {

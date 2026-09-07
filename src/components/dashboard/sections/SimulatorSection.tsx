@@ -234,51 +234,53 @@ const SimulatorSection: React.FC<SimulatorSectionProps> = ({
                     <div className="chart-header">
                         <h3 className="chart-title"><Calendar size={18} style={{ display: 'inline', color: '#10b981', marginRight: '6px', verticalAlign: '-3px' }} /> Global Attendance Heatmap</h3>
                     </div>
-                    <div className="chart-body" style={{ overflowX: 'auto', padding: '10px 0' }}>
+                    <div className="chart-body" style={{ padding: '8px 0' }}>
                         {hasAnyAttendanceDates ? (
                             <div className="github-heatmap-container">
-                                <div className="heatmap-header-row">
-                                    <div className="day-label-cols" />
-                                    <div className="weeks-labels-container">
-                                        {weeks.map((w, idx) => {
-                                            const showMonth = idx === 0 || (w[0].month !== weeks[idx-1][0].month);
-                                            return (
-                                                <div key={idx} className="month-label-col">
-                                                    {showMonth ? <span className="month-name-tag">{w[0].month}</span> : null}
+                                <div className="heatmap-scrollable-inner">
+                                    <div className="heatmap-header-row">
+                                        <div className="day-label-cols" />
+                                        <div className="weeks-labels-container">
+                                            {weeks.map((w, idx) => {
+                                                const showMonth = idx === 0 || (w[0].month !== weeks[idx-1][0].month);
+                                                return (
+                                                    <div key={idx} className="month-label-col">
+                                                        {showMonth ? <span className="month-name-tag">{w[0].month}</span> : null}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                    <div className="heatmap-grid-core">
+                                        <div className="day-labels">
+                                            <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+                                        </div>
+                                        <div className="weeks-container">
+                                            {weeks.map((week, wIdx) => (
+                                                <div key={wIdx} className="heatmap-column">
+                                                    {Array.from({ length: 7 }).map((_, dIdx) => {
+                                                        const day = week.find((d: any) => d.dayIdx === dIdx);
+                                                        if (!day) return <div key={dIdx} className="heatmap-square empty" />;
+                                                        const level = getLevel(day.present, day.absent);
+                                                        const isSelected = selectedHeatmapDay?.dateStr === day.dateStr;
+                                                        return (
+                                                            <div 
+                                                                key={dIdx} 
+                                                                className={`heatmap-square level-${level}`} 
+                                                                style={{ 
+                                                                    background: COLORS[level], 
+                                                                    cursor: 'pointer', 
+                                                                    outline: isSelected ? '2px solid #fff' : 'none',
+                                                                    zIndex: isSelected ? 10 : 1
+                                                                }}
+                                                                title={`${day.niceDate}: ${day.present} present, ${day.absent} absent`}
+                                                                onClick={() => setSelectedHeatmapDay(day)}
+                                                            />
+                                                        );
+                                                    })}
                                                 </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                                <div className="heatmap-grid-core">
-                                    <div className="day-labels">
-                                        <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
-                                    </div>
-                                    <div className="weeks-container">
-                                        {weeks.map((week, wIdx) => (
-                                            <div key={wIdx} className="heatmap-column">
-                                                {Array.from({ length: 7 }).map((_, dIdx) => {
-                                                    const day = week.find((d: any) => d.dayIdx === dIdx);
-                                                    if (!day) return <div key={dIdx} className="heatmap-square empty" />;
-                                                    const level = getLevel(day.present, day.absent);
-                                                    const isSelected = selectedHeatmapDay?.dateStr === day.dateStr;
-                                                    return (
-                                                        <div 
-                                                            key={dIdx} 
-                                                            className={`heatmap-square level-${level}`} 
-                                                            style={{ 
-                                                                background: COLORS[level], 
-                                                                cursor: 'pointer', 
-                                                                outline: isSelected ? '2px solid #fff' : 'none',
-                                                                zIndex: isSelected ? 10 : 1
-                                                            }}
-                                                            title={`${day.niceDate}: ${day.present} present, ${day.absent} absent`}
-                                                            onClick={() => setSelectedHeatmapDay(day)}
-                                                        />
-                                                    );
-                                                })}
-                                            </div>
-                                        ))}
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="heatmap-footer">
