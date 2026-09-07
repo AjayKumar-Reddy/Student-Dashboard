@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import { LogOut, Compass, Trash2, ChevronUp } from "lucide-react";
+import { LogOut, Compass, Trash2, ChevronUp, Github } from "lucide-react";
 
 interface SidebarProfileProps {
   user: {
@@ -127,6 +127,19 @@ const SidebarProfile: React.FC<SidebarProfileProps> = ({ user, onLogout, onDelet
               </button>
             </>
           )}
+
+          <div className="profile-github-link-wrapper">
+            <a
+              href="https://github.com/AjayKumar-Reddy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="profile-github-link"
+              title="GitHub Profile"
+              aria-label="GitHub Profile"
+            >
+              <Github size={13} />
+            </a>
+          </div>
         </div>
       )}
 

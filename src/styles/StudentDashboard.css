@@ -1955,38 +1955,52 @@
 .github-heatmap-container { 
     display: flex; 
     flex-direction: column; 
-    gap: 12px; 
-    padding: 12px 0; 
+    gap: 14px; 
+    padding: 10px 0; 
     width: 100%;
     overflow-x: auto;
-    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
 }
-.github-heatmap-container::-webkit-scrollbar { display: none; }
+.github-heatmap-container::-webkit-scrollbar {
+    height: 6px;
+}
+.github-heatmap-container::-webkit-scrollbar-thumb {
+    background: var(--border-subtle);
+    border-radius: 3px;
+}
+
+.heatmap-scrollable-inner {
+    width: max-content;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
 
 .heatmap-header-row { 
     display: flex; 
-    margin-bottom: 4px; 
+    margin-bottom: 2px; 
     position: relative; 
-    height: 16px; 
-    width: 100%; 
+    height: 18px; 
+    width: max-content; 
 }
 
 .weeks-labels-container { 
     display: flex; 
     gap: 4px; 
-    flex: 1;
 }
 
 .month-label-col { 
     position: relative; 
-    flex: 1;
+    width: 16px;
+    flex-shrink: 0;
 }
 
 .month-name-tag { 
     position: absolute; 
     left: 0; 
     top: 0; 
-    font-size: 10px; 
+    font-size: 11px; 
     font-weight: 500; 
     color: var(--text-muted); 
     white-space: nowrap; 
@@ -1999,51 +2013,54 @@
 
 .heatmap-grid-core { 
     display: flex; 
-    gap: 10px; 
-    width: 100%; 
+    gap: 8px; 
+    width: max-content; 
 }
 
 .day-labels { 
     display: flex; 
     flex-direction: column; 
-    justify-content: space-between; 
-    padding: 2px 0; 
+    gap: 4px; 
+    padding: 0; 
     width: 32px; 
     flex-shrink: 0; 
 }
 
 .day-labels span { 
-    font-size: 9px; 
+    font-size: 10px; 
     color: var(--text-muted); 
-    line-height: 13px; 
-    height: 13px;
-    display: flex;
-    align-items: center;
+    height: 16px; 
+    line-height: 16px; 
+    display: flex; 
+    align-items: center; 
 }
 
 .weeks-container { 
     display: flex; 
     gap: 4px; 
-    flex: 1;
 }
 
 .heatmap-column { 
     display: flex; 
     flex-direction: column; 
     gap: 4px; 
-    flex: 1;
+    width: 16px;
+    flex-shrink: 0; 
 }
 
 .heatmap-square { 
-    width: 100%; 
-    aspect-ratio: 1; 
-    border-radius: 2px;
-    transition: transform 0.1s ease, filter 0.1s ease;
+    width: 16px; 
+    height: 16px;
+    min-width: 16px;
+    min-height: 16px;
+    border-radius: 3px;
+    transition: transform 0.12s ease, filter 0.12s ease;
+    flex-shrink: 0;
 }
 
 .heatmap-square:hover {
-    transform: scale(1.2);
-    filter: brightness(1.2);
+    transform: scale(1.22);
+    filter: brightness(1.25);
     cursor: pointer;
 }
 
@@ -2062,14 +2079,17 @@
 .legend { 
     display: flex; 
     align-items: center; 
-    gap: 4px; 
-    font-size: 10px; 
+    gap: 5px; 
+    font-size: 11px; 
     color: var(--text-muted); 
 }
 
 .legend .heatmap-square { 
-    width: 11px; 
-    height: 11px; 
+    width: 14px; 
+    height: 14px; 
+    min-width: 14px;
+    min-height: 14px;
+    border-radius: 3px;
 }
 
 /* Performance Insights Styles */
@@ -2333,15 +2353,34 @@
     .chart-body {
         height: auto;
     }
-    .heatmap-square {
-        min-width: 18px;
-        min-height: 18px;
-    }
-    .weeks-container {
-        gap: 6px;
+    .month-label-col {
+        width: 15px;
     }
     .heatmap-column {
-        gap: 6px;
+        width: 15px;
+        gap: 3.5px;
+    }
+    .heatmap-square {
+        width: 15px;
+        height: 15px;
+        min-width: 15px;
+        min-height: 15px;
+    }
+    .weeks-container,
+    .weeks-labels-container {
+        gap: 3.5px;
+    }
+    .day-labels {
+        gap: 3.5px;
+        width: 28px;
+    }
+    .day-labels span {
+        height: 15px;
+        line-height: 15px;
+        font-size: 9px;
+    }
+    .day-label-cols {
+        width: 28px;
     }
     .content-wrapper {
         padding: 16px 12px 100px;
@@ -2636,6 +2675,32 @@
     color: #FFFFFF;
     border-color: rgba(239, 68, 68, 0.50);
     box-shadow: 0 4px 16px rgba(239, 68, 68, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+}
+
+.profile-github-link-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding-top: 6px;
+    margin-top: 2px;
+}
+
+.profile-github-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    opacity: 0.45;
+    transition: opacity 0.2s ease, color 0.2s ease, transform 0.2s ease;
+    padding: 3px;
+    border-radius: 4px;
+    text-decoration: none;
+}
+
+.profile-github-link:hover {
+    opacity: 0.9;
+    color: var(--text-primary);
+    transform: scale(1.1);
 }
 
 /* Avatar Status & Triggers */
