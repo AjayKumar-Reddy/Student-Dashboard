@@ -130,7 +130,7 @@ const SidebarProfile: React.FC<SidebarProfileProps> = ({ user, onLogout, onDelet
 
           <div className="profile-github-link-wrapper">
             <a
-              href="https://github.com/AjayKumar-Reddy"
+              href="https://fun-ai-portfolio.vercel.app/"
               target="_blank"
               rel="noopener noreferrer"
               className="profile-github-link"
