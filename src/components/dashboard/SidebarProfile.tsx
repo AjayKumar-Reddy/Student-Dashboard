@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import { LogOut, Compass, Trash2, ChevronUp, Github } from "lucide-react";
+import { LogOut, Compass, Trash2, ChevronUp, Github, Download } from "lucide-react";
 
 interface SidebarProfileProps {
   user: {
@@ -13,9 +13,11 @@ interface SidebarProfileProps {
   onLogout: () => void;
   onDeleteData?: () => void;
   onStartTour?: () => void;
+  onInstall?: () => void;
+  isInstalled?: boolean;
 }
 
-const SidebarProfile: React.FC<SidebarProfileProps> = ({ user, onLogout, onDeleteData, onStartTour }) => {
+const SidebarProfile: React.FC<SidebarProfileProps> = ({ user, onLogout, onDeleteData, onStartTour, onInstall, isInstalled }) => {
   const [showPopover, setShowPopover] = useState(false);
   const profileContainerRef = useRef<HTMLDivElement>(null);
 
@@ -95,6 +97,20 @@ const SidebarProfile: React.FC<SidebarProfileProps> = ({ user, onLogout, onDelet
             >
               <Compass size={16} />
               <span>Interactive Tour</span>
+            </button>
+          )}
+
+          {!isInstalled && onInstall && (
+            <button
+              type="button"
+              className="dropdown-glass-btn install"
+              onClick={() => {
+                setShowPopover(false);
+                onInstall();
+              }}
+            >
+              <Download size={16} />
+              <span>Install as Web App</span>
             </button>
           )}
 

@@ -1,12 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { ShieldCheck, User, RefreshCw, Trash2, ArrowRight, ArrowLeft, X, Sparkles, Smartphone } from "lucide-react";
+import { ShieldCheck, User, RefreshCw, Trash2, ArrowRight, ArrowLeft, X, Smartphone } from "lucide-react";
 
 export interface Step {
   targetSelector: string;
   title: string;
-  badge: string;
   description: string;
   icon: React.ReactNode;
 }
@@ -15,30 +14,26 @@ const getTourSteps = (isMobile: boolean): Step[] => [
   {
     targetSelector: isMobile ? '[data-tour="install-pwa"]' : '[data-tour="security-badge"]',
     title: isMobile ? "Install as Web App" : "Data Security",
-    badge: isMobile ? "Web App" : "Encrypted",
-    description: isMobile ? "Add to your home screen for fast 1-tap access anytime." : "All records are end-to-end encrypted.",
-    icon: isMobile ? <Smartphone size={20} style={{ color: "#00ADB5" }} /> : <ShieldCheck size={20} style={{ color: "#10b981" }} />,
+    description: isMobile ? "Add to your home screen for quick 1-tap access." : "All your academic records are encrypted and protected.",
+    icon: isMobile ? <Smartphone size={15} style={{ color: "var(--accent-primary, #00ADB5)" }} /> : <ShieldCheck size={15} style={{ color: "var(--accent-primary, #00ADB5)" }} />,
   },
   {
     targetSelector: '[data-tour="update-btn"]',
     title: "Live Sync",
-    badge: "Updates",
-    description: "Sync latest grades directly from portal.",
-    icon: <RefreshCw size={20} style={{ color: "#00ADB5" }} />,
+    description: "Fetch and synchronize your latest grades directly from the portal.",
+    icon: <RefreshCw size={15} style={{ color: "var(--accent-primary, #00ADB5)" }} />,
   },
   {
     targetSelector: '[data-tour="sidebar-profile"]',
     title: "Student Profile",
-    badge: "Account",
-    description: "View seat number and profile details.",
-    icon: <User size={20} style={{ color: "#3b82f6" }} />,
+    description: "Review your personal details, seat number, and portfolio links.",
+    icon: <User size={15} style={{ color: "var(--accent-primary, #00ADB5)" }} />,
   },
   {
     targetSelector: '[data-tour="delete-account"]',
-    title: "Account Control",
-    badge: "Privacy",
-    description: "Permanently erase your data anytime.",
-    icon: <Trash2 size={20} style={{ color: "#ef4444" }} />,
+    title: "Privacy & Data Control",
+    description: "Permanently erase local stored session and cached records anytime.",
+    icon: <Trash2 size={15} style={{ color: "#ef4444" }} />,
   },
 ];
 
@@ -151,8 +146,8 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ isOpen, onClose 
     }
 
     const isMobile = window.innerWidth <= 640;
-    const cardWidth = isMobile ? Math.min(300, window.innerWidth - 24) : 310;
-    const estimatedCardHeight = 200;
+    const cardWidth = isMobile ? Math.min(270, window.innerWidth - 32) : 270;
+    const estimatedCardHeight = 145;
 
     // Horizontally center card on all mobile screen sizes
     const mobileLeft = Math.max(12, (window.innerWidth - cardWidth) / 2);
@@ -304,24 +299,20 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ isOpen, onClose 
       {/* Tour Card Dialog floating next to spotlight target */}
       <div className="tour-card-container fade-in" style={getCardPositionStyle()}>
         <div className="tour-card-header">
-          <div className="tour-step-badge">
-            <Sparkles size={12} className="sparkle-icon" />
-            <span>Step {currentStepIdx + 1} of {tourSteps.length}</span>
-          </div>
-          <button type="button" onClick={handleComplete} className="tour-close-btn" title="Skip tour">
-            <X size={15} />
+          <span className="tour-step-counter">
+            {currentStepIdx + 1} of {tourSteps.length}
+          </span>
+          <button type="button" onClick={handleComplete} className="tour-close-btn" title="Skip tour" aria-label="Skip tour">
+            <X size={14} />
           </button>
         </div>
 
         <div className="tour-card-body">
-          <div className="tour-icon-wrap">
-            {currentStep.icon}
+          <div className="tour-title-row">
+            <span className="tour-title-icon">{currentStep.icon}</span>
+            <h4 className="tour-title">{currentStep.title}</h4>
           </div>
-          <div className="tour-text-content">
-            <div className="tour-badge-pill">{currentStep.badge}</div>
-            <h3 className="tour-title">{currentStep.title}</h3>
-            <p className="tour-description">{currentStep.description}</p>
-          </div>
+          <p className="tour-description">{currentStep.description}</p>
         </div>
 
         {/* Progress Dots & Action Controls */}
@@ -341,11 +332,11 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ isOpen, onClose 
           <div className="tour-nav-btns">
             {!isFirstStep && (
               <button type="button" onClick={handleBack} className="tour-btn tour-back-btn">
-                <ArrowLeft size={13} /> Back
+                <ArrowLeft size={11} /> Back
               </button>
             )}
             <button type="button" onClick={handleNext} className="tour-btn tour-next-btn">
-              {isLastStep ? "Done" : "Next"} {!isLastStep && <ArrowRight size={13} />}
+              {isLastStep ? "Done" : "Next"} {!isLastStep && <ArrowRight size={11} />}
             </button>
           </div>
         </div>
