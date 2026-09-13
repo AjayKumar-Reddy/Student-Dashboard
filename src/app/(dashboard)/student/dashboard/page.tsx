@@ -52,7 +52,6 @@ export default function StudentDashboard() {
 
     // PWA Install State
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-    const [isInstallable, setIsInstallable] = useState(false);
     const [isAppInstalled, setIsAppInstalled] = useState(false);
     const [showInstallPopup, setShowInstallPopup] = useState(false);
     const [showIOSPrompt, setShowIOSPrompt] = useState(false);
@@ -127,7 +126,6 @@ export default function StudentDashboard() {
         const handleBeforeInstallPrompt = (e: Event) => {
             e.preventDefault();
             setDeferredPrompt(e);
-            setIsInstallable(true);
 
             // Pop up install toast if not already installed and not dismissed this session
             const dismissedThisSession = sessionStorage.getItem("dismissedInstallPrompt");
@@ -145,7 +143,6 @@ export default function StudentDashboard() {
 
         const handleAppInstalled = () => {
             setIsAppInstalled(true);
-            setIsInstallable(false);
             setShowInstallPopup(false);
             setDeferredPrompt(null);
         };
@@ -174,7 +171,6 @@ export default function StudentDashboard() {
                 deferredPrompt.prompt();
                 const { outcome } = await deferredPrompt.userChoice;
                 if (outcome === 'accepted') {
-                    setIsInstallable(false);
                     setShowInstallPopup(false);
                     setDeferredPrompt(null);
                     setIsAppInstalled(true);
@@ -837,12 +833,18 @@ export default function StudentDashboard() {
 
             {/* Desktop / Generic Browser Install Guide Modal */}
             {showGenericInstallModal && (
-                <div className="glass-modal-overlay fade-in" onClick={() => setShowGenericInstallModal(false)}>
-                    <div className="glass-modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '420px' }}>
+                <div className="glass-modal-overlay fade-in">
+                    <button
+                        type="button"
+                        className="glass-modal-backdrop-btn"
+                        aria-label="Close install modal backdrop"
+                        onClick={() => setShowGenericInstallModal(false)}
+                    />
+                    <div className="glass-modal-card" role="dialog" aria-modal="true" aria-labelledby="install-modal-title" style={{ maxWidth: '420px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                 <Image src="/logo-icon.svg" alt="logo" width={28} height={28} className="sidebar-plain-logo-img" />
-                                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>Install MSR Insight</h3>
+                                <h3 id="install-modal-title" style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>Install MSR Insight</h3>
                             </div>
                             <button
                                 type="button"

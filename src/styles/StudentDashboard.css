@@ -3158,7 +3158,7 @@
 }
 
 .tour-close-btn:hover {
-    color: #ffffff;
+    color: var(--text-primary);
     background: rgba(255, 255, 255, 0.1);
 }
 
@@ -3260,7 +3260,7 @@
 
 .tour-back-btn:hover {
     background: rgba(255, 255, 255, 0.1);
-    color: #ffffff;
+    color: var(--text-primary);
 }
 
 .tour-next-btn {
@@ -3393,7 +3393,7 @@
 }
 
 .install-banner-btn-dismiss:hover {
-    color: #ffffff;
+    color: var(--text-primary);
     background: rgba(255, 255, 255, 0.1);
 }
 

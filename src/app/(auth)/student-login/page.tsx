@@ -10,11 +10,10 @@ const CustomSelect = ({ value, onChange, options, placeholder }: { value: string
 
     return (
         <div className="custom-select-container">
-            <div
+            <button
+                type="button"
                 className={`select-trigger ${isOpen ? "is-open" : ""}`}
                 onClick={() => setIsOpen(!isOpen)}
-                role="button"
-                tabIndex={0}
                 onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault();
@@ -30,18 +29,26 @@ const CustomSelect = ({ value, onChange, options, placeholder }: { value: string
                     {value || placeholder}
                 </span>
                 <span className={`chevron ${isOpen ? "is-open" : ""}`}>▼</span>
-            </div>
+            </button>
             {isOpen && (
                 <div className="select-dropdown" role="listbox">
                     {options.map((opt) => (
                         <div
                             key={opt}
                             role="option"
+                            tabIndex={0}
                             aria-selected={value === opt}
                             className={`select-option ${value === opt ? "selected" : ""}`}
                             onClick={() => {
                                 onChange(opt);
                                 setIsOpen(false);
+                            }}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                    e.preventDefault();
+                                    onChange(opt);
+                                    setIsOpen(false);
+                                }
                             }}
                         >
                             <span>{opt}</span>
@@ -50,11 +57,23 @@ const CustomSelect = ({ value, onChange, options, placeholder }: { value: string
                     ))}
                 </div>
             )}
-            {isOpen && <div className="select-overlay" onClick={() => setIsOpen(false)} />}
+            {isOpen && (
+                <button
+                    type="button"
+                    className="select-overlay"
+                    aria-label="Close dropdown overlay"
+                    onClick={() => setIsOpen(false)}
+                    tabIndex={-1}
+                />
+            )}
 
             <style jsx>{`
                 .custom-select-container { position: relative; flex: 1; }
                 .select-trigger {
+                    width: 100%;
+                    font-family: inherit;
+                    text-align: left;
+                    color: inherit;
                     background: #0f172a;
                     border: 1px solid rgba(255, 255, 255, 0.16);
                     padding: 10px 14px;
@@ -126,9 +145,10 @@ const CustomSelect = ({ value, onChange, options, placeholder }: { value: string
                     align-items: center;
                     justify-content: space-between;
                 }
-                .select-option:hover {
+                .select-option:hover, .select-option:focus-visible {
                     background: #1a2744;
                     color: #ffffff;
+                    outline: none;
                 }
                 .select-option.selected {
                     background: rgba(0, 173, 181, 0.22);
@@ -143,6 +163,10 @@ const CustomSelect = ({ value, onChange, options, placeholder }: { value: string
                     position: fixed;
                     inset: 0;
                     z-index: 90;
+                    background: transparent;
+                    border: none;
+                    padding: 0;
+                    cursor: default;
                 }
             `}</style>
         </div>
