@@ -269,7 +269,7 @@ export default function StudentDashboard() {
 
             if (proctorView === "true" && proctorId && queryUsn) {
                 const pSessionId = localStorage.getItem("proctorSessionId");
-                if (!pSessionId) { router.push("/proctor-login"); return; }
+                if (!pSessionId) { router.push("/student-login"); return; }
 
                 try {
                     const response = await axios.get(`${API_BASE_URL}/api/proctor/${proctorId}/student/${queryUsn}`, {
@@ -285,13 +285,13 @@ export default function StudentDashboard() {
                             setNextAllowedAt(next);
                         }
                     } else {
-                        router.push("/proctor-login");
+                        router.push("/student-login");
                     }
                 } catch (err: any) {
                     console.error("Proctor view mount error:", err);
                     if (err.response?.status === 401) {
                         localStorage.clear();
-                        router.push("/proctor-login");
+                        router.push("/student-login");
                     }
                 } finally {
                     setLoading(false);
@@ -535,7 +535,7 @@ export default function StudentDashboard() {
                             </button>
                             <div className="profile-github-link-wrapper">
                                 <a
-                                    href="https://github.com/AjayKumar-Reddy"
+                                    href="https://fun-ai-portfolio.vercel.app/"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="profile-github-link"
