@@ -52,8 +52,10 @@ export default function StudentDashboard() {
 
     // PWA Install State
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-    const [isInstallable, setIsInstallable] = useState(false);
+    const [isAppInstalled, setIsAppInstalled] = useState(false);
+    const [showInstallPopup, setShowInstallPopup] = useState(false);
     const [showIOSPrompt, setShowIOSPrompt] = useState(false);
+    const [showGenericInstallModal, setShowGenericInstallModal] = useState(false);
     
     // 1b. Route-aware Tab State with Zero-Latency Response
     const searchParams = useSearchParams();
@@ -114,19 +116,43 @@ export default function StudentDashboard() {
     useEffect(() => {
         setMounted(true);
 
+        const checkInstalled = () => {
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || ((window.navigator as any).standalone === true);
+            setIsAppInstalled(!!isStandalone);
+            return !!isStandalone;
+        };
+        const alreadyInstalled = checkInstalled();
+
         const handleBeforeInstallPrompt = (e: Event) => {
             e.preventDefault();
             setDeferredPrompt(e);
-            setIsInstallable(true);
+
+            // Pop up install toast if not already installed and not dismissed this session
+            const dismissedThisSession = sessionStorage.getItem("dismissedInstallPrompt");
+            if (!alreadyInstalled && !dismissedThisSession) {
+                setShowInstallPopup(true);
+                // Trigger browser prompt if permitted
+                try {
+                    (e as any).prompt?.().catch(() => {});
+                } catch {
+                    // Handled gracefully by 1-tap floating banner
+                }
+            }
         };
         window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+        const handleAppInstalled = () => {
+            setIsAppInstalled(true);
+            setShowInstallPopup(false);
+            setDeferredPrompt(null);
+        };
+        window.addEventListener('appinstalled', handleAppInstalled);
 
         // iOS detection
         const userAgent = window.navigator.userAgent.toLowerCase();
         const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
-        const isStandalone = ('standalone' in window.navigator) && ((window.navigator as any).standalone);
         
-        if (isIosDevice && !isStandalone) {
+        if (isIosDevice && !alreadyInstalled) {
             const dismissed = localStorage.getItem("dismissedIOSInstallPrompt");
             if (!dismissed) {
                 setShowIOSPrompt(true);
@@ -135,16 +161,31 @@ export default function StudentDashboard() {
 
         return () => {
             window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+            window.removeEventListener('appinstalled', handleAppInstalled);
         };
     }, []);
 
     const handleInstallPWA = async () => {
-        if (!deferredPrompt) return;
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        if (outcome === 'accepted') {
-            setIsInstallable(false);
-            setDeferredPrompt(null);
+        if (deferredPrompt) {
+            try {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    setShowInstallPopup(false);
+                    setDeferredPrompt(null);
+                    setIsAppInstalled(true);
+                }
+            } catch (err) {
+                console.error("Install prompt error:", err);
+            }
+        } else {
+            const userAgent = window.navigator.userAgent.toLowerCase();
+            const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
+            if (isIosDevice) {
+                setShowIOSPrompt(true);
+            } else {
+                setShowGenericInstallModal(true);
+            }
         }
     };
 
@@ -269,7 +310,7 @@ export default function StudentDashboard() {
 
             if (proctorView === "true" && proctorId && queryUsn) {
                 const pSessionId = localStorage.getItem("proctorSessionId");
-                if (!pSessionId) { router.push("/proctor-login"); return; }
+                if (!pSessionId) { router.push("/student-login"); return; }
 
                 try {
                     const response = await axios.get(`${API_BASE_URL}/api/proctor/${proctorId}/student/${queryUsn}`, {
@@ -285,13 +326,13 @@ export default function StudentDashboard() {
                             setNextAllowedAt(next);
                         }
                     } else {
-                        router.push("/proctor-login");
+                        router.push("/student-login");
                     }
                 } catch (err: any) {
                     console.error("Proctor view mount error:", err);
                     if (err.response?.status === 401) {
                         localStorage.clear();
-                        router.push("/proctor-login");
+                        router.push("/student-login");
                     }
                 } finally {
                     setLoading(false);
@@ -450,14 +491,21 @@ export default function StudentDashboard() {
                             {tab.icon} <span>{tab.label}</span>
                         </button>
                     ))}
-                    {isInstallable && (
+                    {!isAppInstalled && (
                         <button type="button" className="nav-button pwa-install-btn" onClick={handleInstallPWA} style={{ marginTop: 'auto', background: 'rgba(0, 173, 181, 0.1)', color: 'var(--accent-primary, #00ADB5)', border: '1px solid rgba(0, 173, 181, 0.2)' }}>
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m8 17 4 4 4-4"/></svg>
                             <span>Install Web App</span>
                         </button>
                     )}
                 </nav>
-                <SidebarProfile user={student} onLogout={handleLogout} onDeleteData={() => setShowDeleteModal(true)} onStartTour={() => setShowTour(true)} />
+                <SidebarProfile 
+                    user={student} 
+                    onLogout={handleLogout} 
+                    onDeleteData={() => setShowDeleteModal(true)} 
+                    onStartTour={() => setShowTour(true)} 
+                    onInstall={handleInstallPWA}
+                    isInstalled={isAppInstalled}
+                />
             </aside>
 
             {/* Mobile Top Navbar */}
@@ -503,11 +551,14 @@ export default function StudentDashboard() {
                                 <Compass size={16} />
                                 <span>Replay Tour</span>
                             </button>
-                            {isInstallable && (
+                            {!isAppInstalled && (
                                 <button 
                                     type="button"
                                     className="dropdown-glass-btn install"
-                                    onClick={handleInstallPWA}
+                                    onClick={() => {
+                                        setShowMobileProfileMenu(false);
+                                        handleInstallPWA();
+                                    }}
                                 >
                                     <Download size={16} />
                                     <span>Install Web App</span>
@@ -535,7 +586,7 @@ export default function StudentDashboard() {
                             </button>
                             <div className="profile-github-link-wrapper">
                                 <a
-                                    href="https://github.com/AjayKumar-Reddy"
+                                    href="https://fun-ai-portfolio.vercel.app/"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="profile-github-link"
@@ -739,6 +790,95 @@ export default function StudentDashboard() {
 
             {/* Interactive Onboarding Tour */}
             <OnboardingTour isOpen={showTour} onClose={() => setShowTour(false)} />
+
+            {/* Install as Web App Floating Notification */}
+            {showInstallPopup && !isAppInstalled && (
+                <div className="install-banner-toast fade-in">
+                    <div className="install-banner-content">
+                        <div className="install-banner-icon">
+                            <Image src="/logo-icon.svg" alt="logo" width={22} height={22} />
+                        </div>
+                        <div className="install-banner-text">
+                            <div className="install-banner-title">Install MSR Insight</div>
+                            <div className="install-banner-subtitle">Install as a web app for instant 1-tap access</div>
+                        </div>
+                    </div>
+                    <div className="install-banner-actions">
+                        <button
+                            type="button"
+                            className="install-banner-btn-primary"
+                            onClick={() => {
+                                setShowInstallPopup(false);
+                                handleInstallPWA();
+                            }}
+                        >
+                            <Download size={13} />
+                            <span>Install</span>
+                        </button>
+                        <button
+                            type="button"
+                            className="install-banner-btn-dismiss"
+                            onClick={() => {
+                                setShowInstallPopup(false);
+                                sessionStorage.setItem("dismissedInstallPrompt", "true");
+                            }}
+                            title="Dismiss"
+                            aria-label="Dismiss"
+                        >
+                            <X size={14} />
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Desktop / Generic Browser Install Guide Modal */}
+            {showGenericInstallModal && (
+                <div className="glass-modal-overlay fade-in">
+                    <button
+                        type="button"
+                        className="glass-modal-backdrop-btn"
+                        aria-label="Close install modal backdrop"
+                        onClick={() => setShowGenericInstallModal(false)}
+                    />
+                    <div className="glass-modal-card" role="dialog" aria-modal="true" aria-labelledby="install-modal-title" style={{ maxWidth: '420px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <Image src="/logo-icon.svg" alt="logo" width={28} height={28} className="sidebar-plain-logo-img" />
+                                <h3 id="install-modal-title" style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>Install MSR Insight</h3>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowGenericInstallModal(false)}
+                                className="profile-options-trigger"
+                                aria-label="Close modal"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+                        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.5', margin: '0 0 14px 0' }}>
+                            Install MSR Insight on your device for fast offline launch and standalone window experience:
+                        </p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '12.5px', color: 'var(--text-secondary)' }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', background: 'rgba(255,255,255,0.04)', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                                <span style={{ color: 'var(--accent-primary)', fontWeight: '700' }}>1.</span>
+                                <span>Look at your browser&apos;s address bar and click the <strong>Install</strong> icon (computer/down arrow symbol).</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', background: 'rgba(255,255,255,0.04)', padding: '10px 12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                                <span style={{ color: 'var(--accent-primary)', fontWeight: '700' }}>2.</span>
+                                <span>Or click browser <strong>Menu (&vellip;) &rarr; Save and share &rarr; Install MSR Insight</strong>.</span>
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setShowGenericInstallModal(false)}
+                            className="btn btn-primary"
+                            style={{ width: '100%', marginTop: '18px', padding: '9px', fontSize: '13px' }}
+                        >
+                            Got it
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

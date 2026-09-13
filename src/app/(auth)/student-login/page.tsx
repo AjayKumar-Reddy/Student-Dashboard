@@ -10,38 +10,72 @@ const CustomSelect = ({ value, onChange, options, placeholder }: { value: string
 
     return (
         <div className="custom-select-container">
-            <div
-                className="select-trigger"
+            <button
+                type="button"
+                className={`select-trigger ${isOpen ? "is-open" : ""}`}
                 onClick={() => setIsOpen(!isOpen)}
+                onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setIsOpen(!isOpen);
+                    } else if (e.key === "Escape") {
+                        setIsOpen(false);
+                    }
+                }}
+                aria-haspopup="listbox"
+                aria-expanded={isOpen}
             >
                 <span className={value ? "value-text" : "placeholder-text"}>
                     {value || placeholder}
                 </span>
-                <span className="chevron">▼</span>
-            </div>
+                <span className={`chevron ${isOpen ? "is-open" : ""}`}>▼</span>
+            </button>
             {isOpen && (
-                <div className="select-dropdown">
+                <div className="select-dropdown" role="listbox">
                     {options.map((opt) => (
                         <div
                             key={opt}
+                            role="option"
+                            tabIndex={0}
+                            aria-selected={value === opt}
                             className={`select-option ${value === opt ? "selected" : ""}`}
                             onClick={() => {
                                 onChange(opt);
                                 setIsOpen(false);
                             }}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                    e.preventDefault();
+                                    onChange(opt);
+                                    setIsOpen(false);
+                                }
+                            }}
                         >
-                            {opt}
+                            <span>{opt}</span>
+                            {value === opt && <span className="selected-indicator">✓</span>}
                         </div>
                     ))}
                 </div>
             )}
-            {isOpen && <div className="select-overlay" onClick={() => setIsOpen(false)} />}
+            {isOpen && (
+                <button
+                    type="button"
+                    className="select-overlay"
+                    aria-label="Close dropdown overlay"
+                    onClick={() => setIsOpen(false)}
+                    tabIndex={-1}
+                />
+            )}
 
             <style jsx>{`
                 .custom-select-container { position: relative; flex: 1; }
                 .select-trigger {
-                    background: var(--bg-primary);
-                    border: 1px solid var(--border-subtle);
+                    width: 100%;
+                    font-family: inherit;
+                    text-align: left;
+                    color: inherit;
+                    background: #0f172a;
+                    border: 1px solid rgba(255, 255, 255, 0.16);
                     padding: 10px 14px;
                     border-radius: var(--radius-md);
                     cursor: pointer;
@@ -50,36 +84,90 @@ const CustomSelect = ({ value, onChange, options, placeholder }: { value: string
                     align-items: center;
                     font-size: 0.9rem;
                     transition: all 0.2s ease;
+                    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.35);
+                    user-select: none;
                 }
-                .select-trigger:hover { border-color: var(--border-bright); background: var(--bg-secondary); }
-                .value-text { color: var(--text-primary); }
-                .placeholder-text { color: var(--text-muted); }
-                .chevron { font-size: 8px; color: var(--text-muted); opacity: 0.7; }
+                .select-trigger:hover, .select-trigger.is-open {
+                    border-color: var(--accent-primary, #00ADB5);
+                    background: #142036;
+                    box-shadow: 0 0 0 2px rgba(0, 173, 181, 0.2);
+                }
+                .value-text {
+                    color: #ffffff;
+                    font-weight: 500;
+                }
+                .placeholder-text {
+                    color: #94a3b8;
+                }
+                .chevron {
+                    font-size: 9px;
+                    color: #94a3b8;
+                    opacity: 0.85;
+                    transition: transform 0.2s ease, color 0.2s ease;
+                }
+                .chevron.is-open {
+                    transform: rotate(180deg);
+                    color: var(--accent-primary, #00ADB5);
+                }
                 .select-dropdown {
                     position: absolute;
                     top: calc(100% + 6px);
                     left: 0;
                     right: 0;
-                    background: var(--bg-secondary);
-                    border: 1px solid var(--border-subtle);
+                    background: #0a0f1d;
+                    border: 1px solid rgba(255, 255, 255, 0.2);
                     border-radius: var(--radius-md);
-                    max-height: 200px;
+                    max-height: 220px;
                     overflow-y: auto;
                     z-index: 100;
-                    box-shadow: var(--shadow-lg);
-                    padding: 4px;
+                    box-shadow: 0 20px 40px -4px rgba(0, 0, 0, 0.9), 0 8px 16px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0, 173, 181, 0.15);
+                    padding: 5px;
+                }
+                .select-dropdown::-webkit-scrollbar {
+                    width: 5px;
+                }
+                .select-dropdown::-webkit-scrollbar-thumb {
+                    background: rgba(255, 255, 255, 0.25);
+                    border-radius: 4px;
+                }
+                .select-dropdown::-webkit-scrollbar-track {
+                    background: transparent;
                 }
                 .select-option {
-                    padding: 8px 12px;
+                    padding: 9px 12px;
                     cursor: pointer;
                     border-radius: var(--radius-sm);
-                    font-size: 0.85rem;
-                    color: var(--text-secondary);
-                    transition: all 0.2s ease;
+                    font-size: 0.88rem;
+                    color: #e2e8f0;
+                    transition: all 0.15s ease;
+                    font-weight: 500;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
                 }
-                .select-option:hover { background: var(--bg-surface); color: var(--text-primary); }
-                .select-option.selected { background: var(--bg-surface); color: var(--accent-primary); font-weight: 600; }
-                .select-overlay { position: fixed; inset: 0; z-index: 90; }
+                .select-option:hover, .select-option:focus-visible {
+                    background: #1a2744;
+                    color: #ffffff;
+                    outline: none;
+                }
+                .select-option.selected {
+                    background: rgba(0, 173, 181, 0.22);
+                    color: var(--accent-primary, #00ADB5);
+                    font-weight: 600;
+                }
+                .selected-indicator {
+                    font-size: 0.8rem;
+                    color: var(--accent-primary, #00ADB5);
+                }
+                .select-overlay {
+                    position: fixed;
+                    inset: 0;
+                    z-index: 90;
+                    background: transparent;
+                    border: none;
+                    padding: 0;
+                    cursor: default;
+                }
             `}</style>
         </div>
     );
@@ -404,10 +492,11 @@ export default function StudentLogin() {
                     flex-direction: column;
                     gap: 16px;
                     padding: 16px;
-                    background: var(--bg-surface, rgba(255, 255, 255, 0.03));
-                    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+                    background: #090e1a;
+                    border: 1px solid rgba(255, 255, 255, 0.12);
                     border-radius: var(--radius-md);
                     margin-top: 4px;
+                    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
                 }
                 .secondary-header h3 {
                     font-size: 0.95rem;
@@ -418,6 +507,19 @@ export default function StudentLogin() {
                 .secondary-header p {
                     font-size: 0.8rem;
                     color: var(--text-muted);
+                }
+                .input-field {
+                    background: #0f172a !important;
+                    border: 1px solid rgba(255, 255, 255, 0.16) !important;
+                    color: #ffffff !important;
+                }
+                .input-field:focus {
+                    background: #142036 !important;
+                    border-color: var(--accent-primary, #00ADB5) !important;
+                    box-shadow: 0 0 0 2px rgba(0, 173, 181, 0.2) !important;
+                }
+                .input-field::placeholder {
+                    color: #64748b;
                 }
                 .pin-input {
                     letter-spacing: 0.25em;
