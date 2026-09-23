@@ -59,9 +59,10 @@
 }
 
 .att-threshold-btn.active {
-    background: var(--accent-primary, #00ADB5);
-    color: #0f172a;
-    box-shadow: 0 2px 8px rgba(0, 173, 181, 0.35);
+    background: rgba(0, 173, 181, 0.12);
+    color: var(--accent-primary, #00ADB5);
+    border: 1px solid rgba(0, 173, 181, 0.25);
+    box-shadow: none;
 }
 
 /* Attendance Table Card */

@@ -137,13 +137,27 @@ const PlacementSection: React.FC<PlacementSectionProps> = ({
     formatTime,
 }) => {
     const [activeSubTab, setActiveSubTab] = useState<"profile" | "eligibility" | "in_progress" | "completed">("eligibility");
+    const [previousSubTab, setPreviousSubTab] = useState<"eligibility" | "in_progress" | "completed">("eligibility");
     const [selectedEventIndex, setSelectedEventIndex] = useState<number>(0);
     const [eligibilityFilter, setEligibilityFilter] = useState<"active" | "exhausted">("active");
+    const [inProgressFilter, setInProgressFilter] = useState<"active" | "exhausted">("active");
 
     const handleSubTabChange = (tab: "profile" | "eligibility" | "in_progress" | "completed") => {
+        if (tab === "profile") {
+            if (activeSubTab === "profile") {
+                // Clicked profile again: toggle back to normal/previous tab
+                setActiveSubTab(previousSubTab || "eligibility");
+            } else {
+                setPreviousSubTab(activeSubTab as "eligibility" | "in_progress" | "completed");
+                setActiveSubTab("profile");
+            }
+            return;
+        }
+        setPreviousSubTab(tab);
         setActiveSubTab(tab);
         setSelectedEventIndex(0);
         setEligibilityFilter("active");
+        setInProgressFilter("active");
     };
 
     const profile = placementData?.profile || {};
@@ -155,8 +169,19 @@ const PlacementSection: React.FC<PlacementSectionProps> = ({
     const isEventExhausted = (parsed: ParsedEvent): boolean => {
         const statusLower = (parsed.status || "").toLowerCase();
         const rawLower = JSON.stringify(parsed.raw).toLowerCase();
-        if (statusLower.includes("closed") || rawLower.includes("registration closed") || rawLower.includes("closed")) {
+        if (statusLower.includes("closed") || rawLower.includes("registration closed") || rawLower.includes("closed") || statusLower.includes("rejected")) {
             return true;
+        }
+        if (parsed.eventDate) {
+            const d = parseDate(parsed.eventDate);
+            if (d) {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                d.setHours(0, 0, 0, 0);
+                if (d.getTime() < today.getTime()) {
+                    return true;
+                }
+            }
         }
         if (parsed.appliedDate) {
             const d = parseDate(parsed.appliedDate);
@@ -174,8 +199,11 @@ const PlacementSection: React.FC<PlacementSectionProps> = ({
 
     const activeEligibilityEvents = eligibilityEvents.filter(e => !isEventExhausted(parseEventData(e)));
     const exhaustedEligibilityEvents = eligibilityEvents.filter(e => isEventExhausted(parseEventData(e)));
-
     const currentEligibilityEvents = eligibilityFilter === "active" ? activeEligibilityEvents : exhaustedEligibilityEvents;
+
+    const activeInProgressEvents = inProgressEvents.filter(e => !isEventExhausted(parseEventData(e)));
+    const exhaustedInProgressEvents = inProgressEvents.filter(e => isEventExhausted(parseEventData(e)));
+    const currentInProgressEvents = inProgressFilter === "active" ? activeInProgressEvents : exhaustedInProgressEvents;
 
     const isProfileEmpty = Object.keys(profile).length === 0;
     const hasAnyData = !isProfileEmpty || eligibilityEvents.length > 0 || inProgressEvents.length > 0 || completedEvents.length > 0;
@@ -764,9 +792,9 @@ const PlacementSection: React.FC<PlacementSectionProps> = ({
                                                         padding: "8px 16px",
                                                         fontSize: "13px",
                                                         fontWeight: "600",
-                                                        border: "none",
+                                                        border: activeSubTab === tab.id ? "1px solid rgba(0, 173, 181, 0.25)" : "1px solid transparent",
                                                         borderRadius: "8px",
-                                                        background: activeSubTab === tab.id ? "var(--bg-card, #1B2333)" : "transparent",
+                                                        background: activeSubTab === tab.id ? "rgba(0, 173, 181, 0.12)" : "transparent",
                                                         color: activeSubTab === tab.id ? "var(--accent-primary, #00ADB5)" : "var(--text-muted)",
                                                         cursor: "pointer",
                                                         display: "flex",
@@ -782,8 +810,8 @@ const PlacementSection: React.FC<PlacementSectionProps> = ({
                                                             fontSize: "10px", 
                                                             padding: "2px 6px", 
                                                             borderRadius: "10px", 
-                                                            background: activeSubTab === tab.id ? "var(--accent-primary, #00ADB5)" : "rgba(255,255,255,0.1)",
-                                                            color: activeSubTab === tab.id ? "#fff" : "var(--text-primary)"
+                                                            background: activeSubTab === tab.id ? "rgba(0, 173, 181, 0.2)" : "rgba(255,255,255,0.1)",
+                                                            color: activeSubTab === tab.id ? "var(--accent-primary, #00ADB5)" : "var(--text-primary)"
                                                         }}>
                                                             {tab.count}
                                                         </span>
@@ -839,14 +867,15 @@ const PlacementSection: React.FC<PlacementSectionProps> = ({
                                     <button
                                         onClick={() => handleSubTabChange("profile")}
                                         className={`placements-tab-btn ${activeSubTab === "profile" ? 'profile-active' : ''}`}
+                                        title={activeSubTab === "profile" ? "Click to return to events" : "View Profile Details"}
                                         style={{
                                             padding: "8px 16px",
                                             fontSize: "13px",
                                             fontWeight: "600",
-                                            border: "none",
+                                            border: activeSubTab === "profile" ? "1px solid rgba(0, 173, 181, 0.25)" : "1px solid transparent",
                                             borderRadius: "8px",
-                                            background: activeSubTab === "profile" ? "var(--accent-primary, #00ADB5)" : "var(--bg-secondary, rgba(0, 0, 0, 0.2))",
-                                            color: activeSubTab === "profile" ? "#fff" : "var(--text-muted)",
+                                            background: activeSubTab === "profile" ? "rgba(0, 173, 181, 0.12)" : "var(--bg-secondary, rgba(0, 0, 0, 0.2))",
+                                            color: activeSubTab === "profile" ? "var(--accent-primary, #00ADB5)" : "var(--text-muted)",
                                             cursor: "pointer",
                                             display: "flex",
                                             alignItems: "center",
@@ -855,7 +884,7 @@ const PlacementSection: React.FC<PlacementSectionProps> = ({
                                         }}
                                     >
                                         <User size={16} />
-                                        <span className="profile-btn-text">Profile Details</span>
+                                        <span className="profile-btn-text">{activeSubTab === "profile" ? "Back to Events" : "Profile Details"}</span>
                                     </button>
                                 </div>
                             )}
@@ -983,10 +1012,10 @@ const PlacementSection: React.FC<PlacementSectionProps> = ({
                                             transition: "all 0.2s ease"
                                         }}
                                     >
-                                        <span>Active / Upcoming</span>
+                                        <span>Upcoming</span>
                                         <span style={{
-                                            background: eligibilityFilter === "active" ? "var(--accent-primary, #00ADB5)" : "rgba(255,255,255,0.08)",
-                                            color: eligibilityFilter === "active" ? "#fff" : "var(--text-primary)",
+                                            background: eligibilityFilter === "active" ? "rgba(0, 173, 181, 0.2)" : "rgba(255,255,255,0.08)",
+                                            color: eligibilityFilter === "active" ? "var(--accent-primary, #00ADB5)" : "var(--text-primary)",
                                             fontSize: "10px",
                                             padding: "2px 6px",
                                             borderRadius: "10px",
@@ -1014,8 +1043,8 @@ const PlacementSection: React.FC<PlacementSectionProps> = ({
                                     >
                                         <span>Exhausted</span>
                                         <span style={{
-                                            background: eligibilityFilter === "exhausted" ? "#ef4444" : "rgba(255,255,255,0.08)",
-                                            color: eligibilityFilter === "exhausted" ? "#fff" : "var(--text-primary)",
+                                            background: eligibilityFilter === "exhausted" ? "rgba(239, 68, 68, 0.2)" : "rgba(255,255,255,0.08)",
+                                            color: eligibilityFilter === "exhausted" ? "#ef4444" : "var(--text-primary)",
                                             fontSize: "10px",
                                             padding: "2px 6px",
                                             borderRadius: "10px",
@@ -1028,7 +1057,72 @@ const PlacementSection: React.FC<PlacementSectionProps> = ({
                                 {renderEventsList(currentEligibilityEvents, "events to register", <Calendar size={32} color="var(--text-muted)" />)}
                             </>
                         )}
-                        {activeSubTab === "in_progress" && renderEventsList(inProgressEvents, "events in progress", <Clock size={32} color="var(--text-muted)" />)}
+                        {activeSubTab === "in_progress" && (
+                            <>
+                                {/* Segmented control / filter switcher for Upcoming vs. Exhausted in-progress opportunities */}
+                                <div style={{ display: "flex", gap: "8px", marginBottom: "20px", marginTop: "16px" }}>
+                                    <button
+                                        onClick={() => { setInProgressFilter("active"); setSelectedEventIndex(0); }}
+                                        style={{
+                                            padding: "8px 16px",
+                                            fontSize: "12px",
+                                            fontWeight: "700",
+                                            borderRadius: "20px",
+                                            border: "none",
+                                            background: inProgressFilter === "active" ? "rgba(0, 173, 181, 0.15)" : "var(--bg-secondary, rgba(255, 255, 255, 0.02))",
+                                            color: inProgressFilter === "active" ? "var(--accent-primary, #00ADB5)" : "var(--text-muted)",
+                                            cursor: "pointer",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: "6px",
+                                            transition: "all 0.2s ease"
+                                        }}
+                                    >
+                                        <span>Upcoming</span>
+                                        <span style={{
+                                            background: inProgressFilter === "active" ? "rgba(0, 173, 181, 0.2)" : "rgba(255,255,255,0.08)",
+                                            color: inProgressFilter === "active" ? "var(--accent-primary, #00ADB5)" : "var(--text-primary)",
+                                            fontSize: "10px",
+                                            padding: "2px 6px",
+                                            borderRadius: "10px",
+                                            fontWeight: "800"
+                                        }}>
+                                            {activeInProgressEvents.length}
+                                        </span>
+                                    </button>
+                                    <button
+                                        onClick={() => { setInProgressFilter("exhausted"); setSelectedEventIndex(0); }}
+                                        style={{
+                                            padding: "8px 16px",
+                                            fontSize: "12px",
+                                            fontWeight: "700",
+                                            borderRadius: "20px",
+                                            border: "none",
+                                            background: inProgressFilter === "exhausted" ? "rgba(239, 68, 68, 0.15)" : "var(--bg-secondary, rgba(255, 255, 255, 0.02))",
+                                            color: inProgressFilter === "exhausted" ? "#ef4444" : "var(--text-muted)",
+                                            cursor: "pointer",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: "6px",
+                                            transition: "all 0.2s ease"
+                                        }}
+                                    >
+                                        <span>Exhausted</span>
+                                        <span style={{
+                                            background: inProgressFilter === "exhausted" ? "rgba(239, 68, 68, 0.2)" : "rgba(255,255,255,0.08)",
+                                            color: inProgressFilter === "exhausted" ? "#ef4444" : "var(--text-primary)",
+                                            fontSize: "10px",
+                                            padding: "2px 6px",
+                                            borderRadius: "10px",
+                                            fontWeight: "800"
+                                        }}>
+                                            {exhaustedInProgressEvents.length}
+                                        </span>
+                                    </button>
+                                </div>
+                                {renderEventsList(currentInProgressEvents, "events in progress", <Clock size={32} color="var(--text-muted)" />)}
+                            </>
+                        )}
                         {activeSubTab === "completed" && renderEventsList(completedEvents, "completed events", <CheckCircle size={32} color="var(--text-muted)" />)}
                     </div>
                 </div>

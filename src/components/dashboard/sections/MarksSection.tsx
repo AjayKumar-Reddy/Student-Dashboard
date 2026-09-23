@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from "react";
 import {
     Award, TrendingUp, BookOpen, Layers, BarChart2,
-    Calendar, CheckCircle, ChevronRight, FileText, Sparkles
+    Calendar, CheckCircle, ChevronRight, ChevronDown, FileText, Sparkles
 } from "lucide-react";
 import {
     Tooltip, ResponsiveContainer,
@@ -60,6 +60,11 @@ const MarksSection: React.FC<MarksSectionProps> = ({
 }) => {
     const [subTab, setSubTab] = useState<"cie" | "see">("cie");
     const [selectedHistoryIdx, setSelectedHistoryIdx] = useState<number>(0);
+    const [expandedSubject, setExpandedSubject] = useState<string | null>(null);
+
+    const toggleAccordion = (code: string) => {
+        setExpandedSubject(prev => prev === code ? null : code);
+    };
 
     // Reversed history (most recent first)
     const reversedHistory = useMemo(() => [...examHistory].reverse(), [examHistory]);
@@ -141,7 +146,7 @@ const MarksSection: React.FC<MarksSectionProps> = ({
                             </div>
                         </div>
 
-                        {/* Subject CIE Cards */}
+                        {/* Subject CIE Accordion List */}
                         {currentSem.length === 0 ? (
                             <div className="dashboard-empty-state">
                                 <Award size={32} />
@@ -149,7 +154,7 @@ const MarksSection: React.FC<MarksSectionProps> = ({
                                 <p>Internal marks will appear once published by faculty on the portal.</p>
                             </div>
                         ) : (
-                            <div className="cie-subjects-grid">
+                            <div className="cie-accordion-list">
                                 {currentSem.map((subj) => {
                                     const getScore = (type: string) => subj.assessments?.find((a: any) => a.type === type);
                                     const t1 = getScore('T1');
@@ -160,126 +165,94 @@ const MarksSection: React.FC<MarksSectionProps> = ({
                                     const classAvg = hasAverage 
                                         ? Math.round(((t1?.class_average || 0) + (t2?.class_average || 0)) / (t1?.class_average && t2?.class_average ? 2 : 1)) 
                                         : null;
+                                    const pct = typeof subj.marks === 'number' ? Math.min(100, Math.max(0, (subj.marks / 50) * 100)) : 0;
+                                    const barColor = subj.marks >= 40 ? '#10b981' : subj.marks >= 25 ? 'var(--accent-primary, #00ADB5)' : '#f59e0b';
+                                    const isExpanded = expandedSubject === subj.code;
 
                                     return (
                                         <div
                                             key={subj.code}
-                                            className="cie-card"
-                                            onClick={() => onSelectSubject?.(subj)}
-                                            role="button"
-                                            tabIndex={0}
+                                            className={`cie-accordion-item ${isExpanded ? 'expanded' : ''}`}
                                         >
-                                            {/* Header: Code, Name & Score */}
-                                            <div className="cie-card-header">
-                                                <div className="cie-header-info">
-                                                    <span className="cie-code-badge">{subj.code}</span>
-                                                    <h4 className="cie-subj-name" title={subj.name}>{subj.name}</h4>
-                                                </div>
-                                                <div className="cie-score-badge">
-                                                    <div className="cie-score-val">
-                                                        {typeof subj.marks === 'number' ? subj.marks : '—'}
-                                                        <span className="cie-score-denom">/50</span>
+                                            {/* Collapsed Header — always visible */}
+                                            <div
+                                                className="cie-accordion-header"
+                                                onClick={() => toggleAccordion(subj.code)}
+                                            >
+                                                <div className="cie-acc-left">
+                                                    <span className="cie-acc-code">{subj.code}</span>
+                                                    <div className="cie-acc-name-wrap">
+                                                        <span className="cie-acc-name">{subj.name}</span>
+                                                        {typeof subj.marks === 'number' && (
+                                                            <div className="cie-acc-progress-row">
+                                                                <div className="cie-acc-progress-track">
+                                                                    <div 
+                                                                        className="cie-acc-progress-fill" 
+                                                                        style={{ width: `${pct}%`, backgroundColor: barColor }} 
+                                                                    />
+                                                                </div>
+                                                                <span className="cie-acc-pct">{Math.round(pct)}%</span>
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                    <span className="cie-score-label">Total CIE</span>
+                                                </div>
+                                                <div className="cie-acc-right">
+                                                    <div className="cie-acc-marks">
+                                                        <span className="cie-acc-marks-val">
+                                                            {typeof subj.marks === 'number' ? subj.marks : '—'}
+                                                        </span>
+                                                        <span className="cie-acc-marks-max">/50</span>
+                                                    </div>
+                                                    <ChevronDown size={14} className={`cie-acc-chevron ${isExpanded ? 'rotated' : ''}`} />
                                                 </div>
                                             </div>
 
-                                            {/* CIE Progress Meter */}
-                                            {typeof subj.marks === 'number' && (
-                                                <div className="cie-progress-container">
-                                                    <div className="cie-progress-track">
-                                                        <div 
-                                                            className="cie-progress-fill" 
-                                                            style={{ 
-                                                                width: `${Math.min(100, Math.max(0, (subj.marks / 50) * 100))}%`,
-                                                                backgroundColor: subj.marks >= 40 ? '#10b981' : subj.marks >= 25 ? 'var(--accent-primary, #00ADB5)' : '#f59e0b'
-                                                            }} 
-                                                        />
+                                            {/* Expanded Panel — revealed on hover (desktop) / tap (mobile) */}
+                                            <div className="cie-accordion-panel">
+                                                <div className="cie-inline-assessments">
+                                                    <div className="cie-inline-item">
+                                                        <span className="cie-inline-dot dot-t1" />
+                                                        <span className="cie-inline-label">T1</span>
+                                                        <span className="cie-inline-score">{t1?.obtained_marks ?? '—'}</span>
+                                                        <span className="cie-inline-max">/{t1?.max_marks || 30}</span>
                                                     </div>
-                                                    <div className="cie-progress-meta">
-                                                        <span>CIE Performance</span>
-                                                        <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                                                            {Math.round((subj.marks / 50) * 100)}%
-                                                        </span>
+                                                    <div className="cie-inline-item">
+                                                        <span className="cie-inline-dot dot-t2" />
+                                                        <span className="cie-inline-label">T2</span>
+                                                        <span className="cie-inline-score">{t2?.obtained_marks ?? '—'}</span>
+                                                        <span className="cie-inline-max">/{t2?.max_marks || 30}</span>
                                                     </div>
-                                                </div>
-                                            )}
-
-                                            {/* Assessments Grid (2x2 on Mobile, 4x1 on Desktop) */}
-                                            <div className="cie-assessments-grid">
-                                                <div className="cie-ass-tile">
-                                                    <div className="cie-ass-header">
-                                                        <span className="cie-ass-dot dot-t1" />
-                                                        <span className="cie-ass-name">Test 1</span>
+                                                    <div className="cie-inline-item">
+                                                        <span className="cie-inline-dot dot-aq1" />
+                                                        <span className="cie-inline-label">AQ1</span>
+                                                        <span className="cie-inline-score">{aq1?.obtained_marks ?? '—'}</span>
+                                                        <span className="cie-inline-max">/{aq1?.max_marks || 10}</span>
                                                     </div>
-                                                    <div className="cie-ass-marks">
-                                                        <span className="cie-ass-score t1">
-                                                            {t1?.obtained_marks ?? '—'}
-                                                        </span>
-                                                        <span className="cie-ass-max">/{t1?.max_marks || 30}</span>
+                                                    <div className="cie-inline-item">
+                                                        <span className="cie-inline-dot dot-aq2" />
+                                                        <span className="cie-inline-label">AQ2</span>
+                                                        <span className="cie-inline-score">{aq2?.obtained_marks ?? '—'}</span>
+                                                        <span className="cie-inline-max">/{aq2?.max_marks || 10}</span>
                                                     </div>
                                                 </div>
 
-                                                <div className="cie-ass-tile">
-                                                    <div className="cie-ass-header">
-                                                        <span className="cie-ass-dot dot-t2" />
-                                                        <span className="cie-ass-name">Test 2</span>
-                                                    </div>
-                                                    <div className="cie-ass-marks">
-                                                        <span className="cie-ass-score t2">
-                                                            {t2?.obtained_marks ?? '—'}
-                                                        </span>
-                                                        <span className="cie-ass-max">/{t2?.max_marks || 30}</span>
-                                                    </div>
+                                                <div className="cie-panel-footer">
+                                                    {classAvg !== null && (
+                                                        <div className="cie-panel-avg">
+                                                            <Sparkles size={12} />
+                                                            <span>Class Avg: <strong>{classAvg}/30</strong></span>
+                                                        </div>
+                                                    )}
+                                                    <button
+                                                        type="button"
+                                                        className="cie-panel-action"
+                                                        onClick={(e) => { e.stopPropagation(); onSelectSubject?.(subj); }}
+                                                    >
+                                                        <BarChart2 size={12} />
+                                                        <span>View Details</span>
+                                                        <ChevronRight size={12} />
+                                                    </button>
                                                 </div>
-
-                                                <div className="cie-ass-tile">
-                                                    <div className="cie-ass-header">
-                                                        <span className="cie-ass-dot dot-aq1" />
-                                                        <span className="cie-ass-name">Quiz 1</span>
-                                                    </div>
-                                                    <div className="cie-ass-marks">
-                                                        <span className="cie-ass-score aq1">
-                                                            {aq1?.obtained_marks ?? '—'}
-                                                        </span>
-                                                        <span className="cie-ass-max">/{aq1?.max_marks || 10}</span>
-                                                    </div>
-                                                </div>
-
-                                                <div className="cie-ass-tile">
-                                                    <div className="cie-ass-header">
-                                                        <span className="cie-ass-dot dot-aq2" />
-                                                        <span className="cie-ass-name">Quiz 2</span>
-                                                    </div>
-                                                    <div className="cie-ass-marks">
-                                                        <span className="cie-ass-score aq2">
-                                                            {aq2?.obtained_marks ?? '—'}
-                                                        </span>
-                                                        <span className="cie-ass-max">/{aq2?.max_marks || 10}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Class Benchmark Comparison */}
-                                            {classAvg !== null && (
-                                                <div className="cie-avg-banner">
-                                                    <div className="cie-avg-label-wrap">
-                                                        <Sparkles size={13} style={{ color: 'var(--accent-primary)' }} />
-                                                        <span>Class Test Average</span>
-                                                    </div>
-                                                    <span className="cie-avg-value">
-                                                        {classAvg} / 30
-                                                    </span>
-                                                </div>
-                                            )}
-
-                                            {/* Action Link */}
-                                            <div className="cie-card-action">
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    <BarChart2 size={14} style={{ color: 'var(--accent-primary)' }} />
-                                                    <span>View Details & Attendance</span>
-                                                </div>
-                                                <ChevronRight size={14} className="cie-action-icon" />
                                             </div>
                                         </div>
                                     );
