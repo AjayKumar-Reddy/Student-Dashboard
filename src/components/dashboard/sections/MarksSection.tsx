@@ -5,8 +5,33 @@ import {
     Award, TrendingUp, BookOpen, Layers, BarChart2,
     Calendar, CheckCircle, ChevronRight, FileText, Sparkles
 } from "lucide-react";
+import {
+    Tooltip, ResponsiveContainer,
+    BarChart, Bar, XAxis, YAxis, CartesianGrid
+} from "recharts";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import "@/styles/Marks.css";
+
+const MarksTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+        const data = payload[0].payload;
+        return (
+            <div className="custom-chart-tooltip" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}>
+                <p className="tooltip-title">{data.name}</p>
+                <div className="tooltip-divider"></div>
+                <div className="tooltip-row">
+                    <span className="tooltip-label">Code</span>
+                    <span className="tooltip-value">{data.code}</span>
+                </div>
+                <div className="tooltip-row">
+                    <span className="tooltip-label">Internal Marks</span>
+                    <span className="tooltip-value" style={{ color: 'var(--accent-primary)' }}>{data.marks} / 50</span>
+                </div>
+            </div>
+        );
+    }
+    return null;
+};
 
 interface MarksSectionProps {
     studentName?: string;
@@ -39,21 +64,10 @@ const MarksSection: React.FC<MarksSectionProps> = ({
     // Reversed history (most recent first)
     const reversedHistory = useMemo(() => [...examHistory].reverse(), [examHistory]);
 
-    // CIE Metrics
-    const cieMetrics = useMemo(() => {
-        const subjectsWithMarks = currentSem.filter(s => typeof s.marks === 'number' && s.marks > 0);
-        const avgScore = subjectsWithMarks.length > 0
-            ? Math.round(subjectsWithMarks.reduce((acc, s) => acc + s.marks, 0) / subjectsWithMarks.length)
-            : 0;
-
-        const bestSubj = [...subjectsWithMarks].sort((a, b) => (b.marks || 0) - (a.marks || 0))[0];
-
-        return {
-            avgScore,
-            bestSubj,
-            trackedCount: subjectsWithMarks.length
-        };
-    }, [currentSem]);
+    const hasMarksData = currentSem.length > 0 && currentSem.some((s: any) => 
+        (s.marks && s.marks > 0) || 
+        (s.assessments && s.assessments.length > 0)
+    );
 
     return (
         <div className="tab-content">
@@ -87,38 +101,43 @@ const MarksSection: React.FC<MarksSectionProps> = ({
                 {/* ───────────────── 1. CIE VIEW ───────────────── */}
                 {subTab === 'cie' && (
                     <>
-                        {/* CIE Top Stats */}
-                        <div className="marks-stats-grid">
-                            <div className="marks-stat-card">
-                                <div className="marks-stat-icon cyan">
-                                    <Award size={24} />
-                                </div>
-                                <div className="marks-stat-info">
-                                    <span className="marks-stat-label">Average Internal Score</span>
-                                    <span className="marks-stat-value">{cieMetrics.avgScore} <span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>/ 50</span></span>
+                        {/* CIE Bar Chart at the Top */}
+                        <div className="chart-card">
+                            <div className="chart-header">
+                                <div>
+                                    <h3 className="chart-title">Internal Marks (CIE)</h3>
+                                    <p className="chart-subtitle">Subject-wise CIE scores out of 50</p>
                                 </div>
                             </div>
-
-                            <div className="marks-stat-card">
-                                <div className="marks-stat-icon green">
-                                    <TrendingUp size={24} />
-                                </div>
-                                <div className="marks-stat-info">
-                                    <span className="marks-stat-label">Highest CIE Score</span>
-                                    <span className="marks-stat-value">
-                                        {cieMetrics.bestSubj ? `${cieMetrics.bestSubj.marks} / 50` : '—'}
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div className="marks-stat-card">
-                                <div className="marks-stat-icon purple">
-                                    <BookOpen size={24} />
-                                </div>
-                                <div className="marks-stat-info">
-                                    <span className="marks-stat-label">Subjects Tracked</span>
-                                    <span className="marks-stat-value">{currentSem.length}</span>
-                                </div>
+                            <div className="chart-body marks-chart-body">
+                                {hasMarksData ? (
+                                    <ResponsiveContainer width="100%" height={380}>
+                                        <BarChart data={currentSem} margin={{ top: 20, right: 0, left: -20, bottom: 20 }}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.15)" vertical={false} />
+                                            <XAxis dataKey="code" stroke="var(--text-muted)" style={{ fontSize: '11px' }} axisLine={false} tickLine={false} />
+                                            <YAxis domain={[0, 50]} ticks={[0, 10, 20, 30, 40, 50]} stroke="var(--text-muted)" style={{ fontSize: '12px' }} axisLine={false} tickLine={false} />
+                                            <Tooltip content={<MarksTooltip />} cursor={{ fill: 'var(--bg-primary)' }} />
+                                            <Bar 
+                                                dataKey="marks" 
+                                                radius={[4, 4, 0, 0]} 
+                                                barSize={20} 
+                                                fill="var(--accent-primary)" 
+                                                onClick={(data: any) => data && onSelectSubject?.(data.payload)}
+                                                style={{ cursor: 'pointer' }}
+                                            />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="dashboard-empty-state">
+                                        <div className="empty-state-icon-wrap purple">
+                                            <Award size={26} />
+                                        </div>
+                                        <h4 className="empty-state-title">No CIE Marks Available</h4>
+                                        <p className="empty-state-desc">
+                                            Internal assessment scores will display once published.
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -137,82 +156,131 @@ const MarksSection: React.FC<MarksSectionProps> = ({
                                     const t2 = getScore('T2');
                                     const aq1 = getScore('AQ1');
                                     const aq2 = getScore('AQ2');
+                                    const hasAverage = (t1?.class_average && t1.class_average > 0) || (t2?.class_average && t2.class_average > 0);
+                                    const classAvg = hasAverage 
+                                        ? Math.round(((t1?.class_average || 0) + (t2?.class_average || 0)) / (t1?.class_average && t2?.class_average ? 2 : 1)) 
+                                        : null;
 
                                     return (
                                         <div
                                             key={subj.code}
                                             className="cie-card"
                                             onClick={() => onSelectSubject?.(subj)}
+                                            role="button"
+                                            tabIndex={0}
                                         >
-                                            <div className="cie-card-top">
-                                                <div>
-                                                    <span className="cie-subj-code">{subj.code}</span>
-                                                    <h4 className="cie-subj-name">{subj.name}</h4>
+                                            {/* Header: Code, Name & Score */}
+                                            <div className="cie-card-header">
+                                                <div className="cie-header-info">
+                                                    <span className="cie-code-badge">{subj.code}</span>
+                                                    <h4 className="cie-subj-name" title={subj.name}>{subj.name}</h4>
                                                 </div>
                                                 <div className="cie-score-badge">
-                                                    <div className="cie-score-main">
+                                                    <div className="cie-score-val">
                                                         {typeof subj.marks === 'number' ? subj.marks : '—'}
+                                                        <span className="cie-score-denom">/50</span>
                                                     </div>
-                                                    <div className="cie-score-max">out of 50</div>
+                                                    <span className="cie-score-label">Total CIE</span>
                                                 </div>
                                             </div>
 
-                                            {/* Assessments Grid */}
-                                            <div className="cie-assessments-grid">
-                                                <div className="cie-ass-item">
-                                                    <span className="cie-ass-name">Test 1</span>
-                                                    <span className="cie-ass-score t1">
-                                                        {t1?.obtained_marks ?? '—'}
-                                                    </span>
-                                                    <span className="cie-ass-max">/ {t1?.max_marks || 30}</span>
-                                                </div>
-                                                <div className="cie-ass-item">
-                                                    <span className="cie-ass-name">Test 2</span>
-                                                    <span className="cie-ass-score t2">
-                                                        {t2?.obtained_marks ?? '—'}
-                                                    </span>
-                                                    <span className="cie-ass-max">/ {t2?.max_marks || 30}</span>
-                                                </div>
-                                                <div className="cie-ass-item">
-                                                    <span className="cie-ass-name">Quiz 1</span>
-                                                    <span className="cie-ass-score aq1">
-                                                        {aq1?.obtained_marks ?? '—'}
-                                                    </span>
-                                                    <span className="cie-ass-max">/ {aq1?.max_marks || 10}</span>
-                                                </div>
-                                                <div className="cie-ass-item">
-                                                    <span className="cie-ass-name">Quiz 2</span>
-                                                    <span className="cie-ass-score aq2">
-                                                        {aq2?.obtained_marks ?? '—'}
-                                                    </span>
-                                                    <span className="cie-ass-max">/ {aq2?.max_marks || 10}</span>
-                                                </div>
-                                            </div>
-
-                                            {/* Class Average Info */}
-                                            {(t1?.class_average || t2?.class_average) && (
-                                                <div className="cie-avg-comparison">
-                                                    <div className="cie-avg-labels">
-                                                        <span>Class Test Avg</span>
-                                                        <strong>
-                                                            {Math.round(((t1?.class_average || 0) + (t2?.class_average || 0)) / (t1 && t2 ? 2 : 1))} / 30
-                                                        </strong>
+                                            {/* CIE Progress Meter */}
+                                            {typeof subj.marks === 'number' && (
+                                                <div className="cie-progress-container">
+                                                    <div className="cie-progress-track">
+                                                        <div 
+                                                            className="cie-progress-fill" 
+                                                            style={{ 
+                                                                width: `${Math.min(100, Math.max(0, (subj.marks / 50) * 100))}%`,
+                                                                backgroundColor: subj.marks >= 40 ? '#10b981' : subj.marks >= 25 ? 'var(--accent-primary, #00ADB5)' : '#f59e0b'
+                                                            }} 
+                                                        />
+                                                    </div>
+                                                    <div className="cie-progress-meta">
+                                                        <span>CIE Performance</span>
+                                                        <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                                                            {Math.round((subj.marks / 50) * 100)}%
+                                                        </span>
                                                     </div>
                                                 </div>
                                             )}
 
-                                            <button
-                                                type="button"
-                                                className="att-details-btn"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    onSelectSubject?.(subj);
-                                                }}
-                                            >
-                                                <BarChart2 size={13} />
-                                                <span>View Performance Details</span>
-                                                <ChevronRight size={13} />
-                                            </button>
+                                            {/* Assessments Grid (2x2 on Mobile, 4x1 on Desktop) */}
+                                            <div className="cie-assessments-grid">
+                                                <div className="cie-ass-tile">
+                                                    <div className="cie-ass-header">
+                                                        <span className="cie-ass-dot dot-t1" />
+                                                        <span className="cie-ass-name">Test 1</span>
+                                                    </div>
+                                                    <div className="cie-ass-marks">
+                                                        <span className="cie-ass-score t1">
+                                                            {t1?.obtained_marks ?? '—'}
+                                                        </span>
+                                                        <span className="cie-ass-max">/{t1?.max_marks || 30}</span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="cie-ass-tile">
+                                                    <div className="cie-ass-header">
+                                                        <span className="cie-ass-dot dot-t2" />
+                                                        <span className="cie-ass-name">Test 2</span>
+                                                    </div>
+                                                    <div className="cie-ass-marks">
+                                                        <span className="cie-ass-score t2">
+                                                            {t2?.obtained_marks ?? '—'}
+                                                        </span>
+                                                        <span className="cie-ass-max">/{t2?.max_marks || 30}</span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="cie-ass-tile">
+                                                    <div className="cie-ass-header">
+                                                        <span className="cie-ass-dot dot-aq1" />
+                                                        <span className="cie-ass-name">Quiz 1</span>
+                                                    </div>
+                                                    <div className="cie-ass-marks">
+                                                        <span className="cie-ass-score aq1">
+                                                            {aq1?.obtained_marks ?? '—'}
+                                                        </span>
+                                                        <span className="cie-ass-max">/{aq1?.max_marks || 10}</span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="cie-ass-tile">
+                                                    <div className="cie-ass-header">
+                                                        <span className="cie-ass-dot dot-aq2" />
+                                                        <span className="cie-ass-name">Quiz 2</span>
+                                                    </div>
+                                                    <div className="cie-ass-marks">
+                                                        <span className="cie-ass-score aq2">
+                                                            {aq2?.obtained_marks ?? '—'}
+                                                        </span>
+                                                        <span className="cie-ass-max">/{aq2?.max_marks || 10}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Class Benchmark Comparison */}
+                                            {classAvg !== null && (
+                                                <div className="cie-avg-banner">
+                                                    <div className="cie-avg-label-wrap">
+                                                        <Sparkles size={13} style={{ color: 'var(--accent-primary)' }} />
+                                                        <span>Class Test Average</span>
+                                                    </div>
+                                                    <span className="cie-avg-value">
+                                                        {classAvg} / 30
+                                                    </span>
+                                                </div>
+                                            )}
+
+                                            {/* Action Link */}
+                                            <div className="cie-card-action">
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <BarChart2 size={14} style={{ color: 'var(--accent-primary)' }} />
+                                                    <span>View Details & Attendance</span>
+                                                </div>
+                                                <ChevronRight size={14} className="cie-action-icon" />
+                                            </div>
                                         </div>
                                     );
                                 })}
@@ -241,7 +309,7 @@ const MarksSection: React.FC<MarksSectionProps> = ({
                                     <TrendingUp size={24} />
                                 </div>
                                 <div className="marks-stat-info">
-                                    <span className="marks-stat-label">Latest Semester SGPA</span>
+                                    <span className="marks-stat-label">Latest SGPA</span>
                                     <span className="marks-stat-value">{latestSGPA ? latestSGPA.toFixed(2) : "—"}</span>
                                 </div>
                             </div>
@@ -269,7 +337,7 @@ const MarksSection: React.FC<MarksSectionProps> = ({
                             </div>
                         ) : (
                             <>
-                                {/* Mobile Semester Selector Dropdown */}
+                                {/* Mobile Semester Selector Dropdown (only for mobile) */}
                                 <div className="mobile-history-selector">
                                     <label htmlFor="sem-select-marks" className="stat-label" style={{ paddingLeft: '4px', fontSize: '11px', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>
                                         Select Semester
@@ -302,68 +370,55 @@ const MarksSection: React.FC<MarksSectionProps> = ({
                                     </select>
                                 </div>
 
-                                {/* Desktop Semester Chips */}
-                                <div className="see-sem-selector hide-on-mobile">
-                                    {reversedHistory.map((sem: any, idx: number) => {
-                                        const semNum = isLateralEntry ? (examHistory.length - idx + 2) : (examHistory.length - idx);
-                                        return (
-                                            <button
-                                                key={sem.semester || idx}
-                                                type="button"
-                                                className={`see-sem-chip ${selectedHistoryIdx === idx ? 'active' : ''}`}
-                                                onClick={() => setSelectedHistoryIdx(idx)}
-                                            >
-                                                Semester {semNum} • {sem.sgpa} SGPA
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-
-                                {/* Semester Results Grid */}
                                 <div className="history-grid">
                                     {reversedHistory.map((sem: any, idx: number) => (
                                         <div
                                             key={sem.semester || idx}
                                             className={`chart-card history-card ${selectedHistoryIdx === idx ? 'mobile-show' : 'mobile-hide'}`}
                                         >
-                                            <div className="chart-header" style={{ borderBottom: '1px solid var(--border-subtle)', paddingBottom: '16px', marginBottom: '16px', display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                                                <div>
-                                                    <span className="pill" style={{ marginBottom: '8px', display: 'inline-block' }}>
-                                                        Semester {isLateralEntry ? (examHistory.length - idx + 2) : (examHistory.length - idx)}
-                                                    </span>
-                                                    <h3 className="chart-title" style={{ margin: 0 }}>{sem.semester}</h3>
-                                                </div>
-                                                <div className="history-sgpa-badge" style={{ textAlign: 'right', flexShrink: 0 }}>
-                                                    <div className="stat-label" style={{ fontSize: '10px', textTransform: 'uppercase', color: 'var(--text-muted)' }}>SGPA</div>
-                                                    <div className="stat-value" style={{ fontSize: '24px', fontWeight: '800', color: 'var(--accent-primary)', lineHeight: 1 }}>{sem.sgpa}</div>
-                                                </div>
+                                        <div className="chart-header" style={{ borderBottom: '1px solid var(--border-subtle)', paddingBottom: '16px', marginBottom: '16px', display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                                            <div>
+                                                <span className="pill" style={{ marginBottom: '8px', display: 'inline-block' }}>
+                                                    Semester {isLateralEntry ? (examHistory.length - idx + 2) : (examHistory.length - idx)}
+                                                </span>
+                                                <h3 className="chart-title" style={{ margin: 0 }}>{sem.semester}</h3>
                                             </div>
-                                            <div className="dashboard-table-container">
-                                                <table className="dashboard-table">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Code</th>
-                                                            <th>Course</th>
-                                                            <th style={{ textAlign: 'right' }}>Grade</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {sem.courses?.map((c: any, i: number) => (
-                                                            <tr key={c.code || c.name || i}>
-                                                                <td style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{c.code}</td>
-                                                                <td style={{ fontSize: '13px' }}>{c.name}</td>
-                                                                <td style={{ textAlign: 'right', fontWeight: 'bold', color: GRADE_COLORS[c.grade] || 'var(--text-primary)' }}>
-                                                                    {c.grade}
-                                                                </td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
+                                            <div className="history-sgpa-badge" style={{ textAlign: 'right', flexShrink: 0 }}>
+                                                <div className="stat-label" style={{ fontSize: '10px', textTransform: 'uppercase', color: 'var(--text-muted)' }}>SGPA</div>
+                                                <div className="stat-value" style={{ fontSize: '24px', fontWeight: '800', color: 'var(--accent-primary)', lineHeight: 1 }}>{sem.sgpa}</div>
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
-                            </>
+                                        <div className="dashboard-table-container">
+                                            <table className="dashboard-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Course</th>
+                                                        <th style={{ textAlign: 'right' }}>Grade</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {sem.courses?.map((c: any, i: number) => (
+                                                        <tr key={c.code || c.name || i}>
+                                                            <td>
+                                                                <div style={{ fontWeight: 600, fontSize: '13.5px', color: 'var(--text-primary)', lineHeight: 1.4 }}>
+                                                                    {c.name}
+                                                                </div>
+                                                                <div style={{ color: 'var(--text-muted)', fontSize: '11.5px', marginTop: '2px', letterSpacing: '0.3px', fontWeight: 500 }}>
+                                                                    {c.code}
+                                                                </div>
+                                                            </td>
+                                                            <td style={{ textAlign: 'right', fontWeight: 'bold', fontSize: '14px', color: GRADE_COLORS[c.grade] || 'var(--text-primary)' }}>
+                                                                {c.grade}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </>
                         )}
                     </div>
                 )}

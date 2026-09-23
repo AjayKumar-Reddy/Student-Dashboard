@@ -1,18 +1,18 @@
 "use client";
 
 import React from "react";
-import { Award, BookOpen, Layers, Calendar, TrendingUp, Sparkles } from "lucide-react";
+import { Award, BookOpen, Layers, TrendingUp } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import { UpdateButton } from "@/components/dashboard/UpdateButton";
 
 interface PerformanceSectionProps {
     student: any;
     currentSem: any[];
-    overallAttendance: number;
+    overallAttendance?: number;
     totalCredits: number;
     maxCredits: number;
     currentCgpa: string | null;
-    onSelectSubject: (subject: any) => void;
+    onSelectSubject?: (subject: any) => void;
     handleUpdate: () => void;
     updateStatus: 'loading' | 'success' | 'error' | null;
     isCooldownActive: boolean;
@@ -23,54 +23,21 @@ interface PerformanceSectionProps {
     isImproved: boolean;
 }
 
-import { 
-    Tooltip, ResponsiveContainer, 
-    BarChart, Bar, XAxis, YAxis, CartesianGrid 
-} from "recharts";
-
-const MarksTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-        const data = payload[0].payload;
-        return (
-            <div className="custom-chart-tooltip" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}>
-                <p className="tooltip-title">{data.name}</p>
-                <div className="tooltip-divider"></div>
-                <div className="tooltip-row">
-                    <span className="tooltip-label">Code</span>
-                    <span className="tooltip-value">{data.code}</span>
-                </div>
-                <div className="tooltip-row">
-                    <span className="tooltip-label">Internal Marks</span>
-                    <span className="tooltip-value" style={{ color: 'var(--accent-primary)' }}>{data.marks} / 50</span>
-                </div>
-            </div>
-        );
-    }
-    return null;
-};
-
 const PerformanceSection: React.FC<PerformanceSectionProps> = ({
     student,
-    currentSem,
-    overallAttendance,
+    currentSem = [],
     totalCredits,
     maxCredits,
     currentCgpa,
-    onSelectSubject,
     handleUpdate,
     updateStatus,
     isCooldownActive,
     formatTime,
-    examHistory,
+    examHistory = [],
     latestSGPA,
     sgpaDiff,
     isImproved
 }) => {
-    const hasMarksData = currentSem.length > 0 && currentSem.some((s: any) => 
-        (s.marks && s.marks > 0) || 
-        (s.assessments && s.assessments.length > 0)
-    );
-
     return (
         <div className="tab-content">
             <DashboardHeader
@@ -132,104 +99,6 @@ const PerformanceSection: React.FC<PerformanceSectionProps> = ({
                                 : "No semester results in history yet"}
                         </p>
                     )}
-                </div>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-                <div className="chart-card">
-                    <div className="chart-header">
-                        <div>
-                            <h3 className="chart-title">Internal Marks (CIE)</h3>
-                            <p className="chart-subtitle">Subject-wise CIE scores out of 50</p>
-                        </div>
-                    </div>
-                    <div className="chart-body marks-chart-body">
-                        {hasMarksData ? (
-                            <ResponsiveContainer width="100%" height={380}>
-                                <BarChart data={currentSem} margin={{ top: 20, right: 0, left: -20, bottom: 20 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.15)" vertical={false} />
-                                    <XAxis dataKey="code" stroke="var(--text-muted)" style={{ fontSize: '11px' }} axisLine={false} tickLine={false} />
-                                    <YAxis domain={[0, 50]} ticks={[0, 10, 20, 30, 40, 50]} stroke="var(--text-muted)" style={{ fontSize: '12px' }} axisLine={false} tickLine={false} />
-                                    <Tooltip content={<MarksTooltip />} cursor={{ fill: 'var(--bg-primary)' }} />
-                                    <Bar 
-                                        dataKey="marks" 
-                                        radius={[4, 4, 0, 0]} 
-                                        barSize={20} 
-                                        fill="var(--accent-primary)" 
-                                        onClick={(data: any) => data && onSelectSubject(data.payload)}
-                                        style={{ cursor: 'pointer' }}
-                                    />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        ) : (
-                            <div className="dashboard-empty-state">
-                                <div className="empty-state-icon-wrap purple">
-                                    <Award size={26} />
-                                </div>
-                                <h4 className="empty-state-title">No CIE Marks Available</h4>
-                                <p className="empty-state-desc">
-                                    Internal assessment scores will display once published.
-                                </p>
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                <div className="table-section-wrapper" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 4px' }}>
-                        <span className="mobile-tap-hint" style={{ fontSize: '12px', color: 'var(--accent-primary)', opacity: 0.9, fontWeight: 500 }}>
-                            Tap any Subject for details
-                        </span>
-                    </div>
-                    <div className="dashboard-table-container">
-                        {currentSem.length > 0 ? (
-                            <table className="dashboard-table">
-                                <thead>
-                                    <tr><th className="course-code-col">Code</th><th className="course-name-col">Course Name</th><th className="attendance-col" style={{ textAlign: 'center' }}>Attendance</th><th className="cie-col" style={{ textAlign: 'center' }}>CIE Marks</th></tr>
-                                </thead>
-                                <tbody>
-                                    {currentSem.map((s: any, idx: number) => {
-                                        const att = Math.round(s.attendance || 0);
-                                        const hasSubjectAtt = (s.attendance && s.attendance > 0) || (s.attendance_details?.present && s.attendance_details.present > 0) || (s.attendance_details?.absent && s.attendance_details.absent > 0);
-                                        const attClass = att >= 85 ? 'success' : att >= 75 ? 'warning' : 'error';
-                                        
-                                        const hasSubjectMarks = (s.marks && s.marks > 0) || (s.assessments && s.assessments.length > 0);
-                                        
-                                        return (
-                                            <tr key={s.code || s.name || idx} onClick={() => onSelectSubject(s)} className="interactive-row">
-                                                <td className="text-muted course-code-col">{s.code}</td>
-                                                <td className="font-semibold course-name-col">{s.name}</td>
-                                                <td className="attendance-col" style={{ textAlign: 'center' }}>
-                                                    {hasSubjectAtt ? (
-                                                        <span className={`pill ${attClass}`}>{att}%</span>
-                                                    ) : (
-                                                        <span className="pill info" title="Classes starting soon">Pending</span>
-                                                    )}
-                                                </td>
-                                                <td className="cie-col" style={{ textAlign: 'center' }}>
-                                                    {hasSubjectMarks ? (
-                                                        <span className={`pill ${s.marks >= 30 ? 'success' : 'warning'}`}>{s.marks} / 50</span>
-                                                    ) : (
-                                                        <span className="pill info" title="Evaluations pending">Pending</span>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        ) : (
-                            <div className="dashboard-empty-state" style={{ margin: '16px 0' }}>
-                                <div className="empty-state-icon-wrap blue">
-                                    <BookOpen size={26} />
-                                </div>
-                                <h4 className="empty-state-title">No Courses Registered</h4>
-                                <p className="empty-state-desc">
-                                    Click "Live Sync" to refresh your courses.
-                                </p>
-                            </div>
-                        )}
-                    </div>
                 </div>
             </div>
         </div>

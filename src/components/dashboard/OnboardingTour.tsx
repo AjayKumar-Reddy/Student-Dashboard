@@ -12,9 +12,9 @@ export interface Step {
 
 const getTourSteps = (isMobile: boolean): Step[] => [
   {
-    targetSelector: isMobile ? '[data-tour="install-pwa"]' : '[data-tour="security-badge"]',
-    title: isMobile ? "Install as Web App" : "Data Security",
-    description: isMobile ? "Add to your home screen for quick 1-tap access." : "All your academic records are encrypted and protected.",
+    targetSelector: isMobile ? '[data-tour="install-pwa"]' : '.dashboard-header-container',
+    title: isMobile ? "Install as Web App" : "Academic Dashboard",
+    description: isMobile ? "Add to your home screen for quick 1-tap access." : "Access your complete semester grades, attendance, and analytics in real-time.",
     icon: isMobile ? <Smartphone size={15} style={{ color: "var(--accent-primary, #00ADB5)" }} /> : <ShieldCheck size={15} style={{ color: "var(--accent-primary, #00ADB5)" }} />,
   },
   {

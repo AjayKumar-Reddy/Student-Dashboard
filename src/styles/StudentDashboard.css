@@ -1308,8 +1308,14 @@
     }
 
     .history-card .dashboard-table {
-        min-width: 450px;
-        /* Force minimum table width to ensure data wrap isn't ugly */
+        min-width: 0;
+        width: 100%;
+        table-layout: fixed;
+    }
+
+    .history-card .dashboard-table-container {
+        overflow-x: hidden;
+        width: 100%;
     }
 
     .history-tab-container {
