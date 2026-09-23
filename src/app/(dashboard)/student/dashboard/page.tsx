@@ -4,7 +4,7 @@ import React, { useEffect, useState, useMemo, useRef, useCallback } from "react"
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import axios from "axios";
 import {
-    Target, History as HistoryIcon, Award, Menu, X, Gamepad2, LogOut, BookOpen, Briefcase, Compass, Download, Trash2, Github
+    Target, History as HistoryIcon, Award, Menu, X, Gamepad2, LogOut, BookOpen, Briefcase, Compass, Download, Trash2, Github, Calendar
 } from "lucide-react";
 import "@/styles/StudentDashboard.css";
 import { API_BASE_URL } from "@/config/api.config";
@@ -25,6 +25,7 @@ import NotesSection from "@/components/dashboard/sections/NotesSection";
 import LoadingScreen from "@/components/dashboard/LoadingScreen";
 import BirthdayBanner from "@/components/dashboard/BirthdayBanner";
 import PlacementSection from "@/components/dashboard/sections/PlacementSection";
+import TimetableSection from "@/components/dashboard/sections/TimetableSection";
 import OnboardingTour from "@/components/dashboard/OnboardingTour";
 
 
@@ -481,6 +482,7 @@ export default function StudentDashboard() {
                 <nav className="sidebar-navigation">
                     {[
                         { id: 'performance', icon: <Target size={20} />, label: 'Current Semester' },
+                        { id: 'timetable', icon: <Calendar size={20} />, label: 'Timetable' },
                         { id: 'notes', icon: <BookOpen size={20} />, label: 'Notes & PYQs' },
                         { id: 'analytics', icon: <BarChart3 size={20} />, label: 'Analytics' },
                         { id: 'placement', icon: <Briefcase size={20} />, label: 'Placements' },
@@ -681,6 +683,12 @@ export default function StudentDashboard() {
                                     GRADE_POINTS={GRADE_POINTS}
                                 />
                             )}
+                            {activeTab === 'timetable' && (
+                                <TimetableSection
+                                    studentName={student?.name}
+                                    timetableData={detailsBlob.timetable}
+                                />
+                            )}
                         </>
                     )}
                 </div>
@@ -690,6 +698,7 @@ export default function StudentDashboard() {
             <nav className="mobile-bottom-nav">
                 {[
                     { id: 'performance', icon: <Target size={20} />, label: 'Semester' },
+                    { id: 'timetable', icon: <Calendar size={20} />, label: 'Timetable' },
                     { id: 'notes', icon: <BookOpen size={20} />, label: 'Notes' },
                     { id: 'placement', icon: <Briefcase size={20} />, label: 'Placements' },
                     { id: 'analytics', icon: <BarChart3 size={20} />, label: 'Analytics' },
