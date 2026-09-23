@@ -122,7 +122,8 @@ class DataNormalizer {
             current_year: currentYear,
             subjects: normalizedSubjects,
             exam_history: scrapedRecord.exam_history || [],
-            placement: scrapedRecord.placement || null
+            placement: scrapedRecord.placement || null,
+            timetable: scrapedRecord.timetable || null
         };
     }
 
@@ -590,6 +591,9 @@ const assignTargetData = (scrapedData: any, type: string, courseCode: string, ht
         case "placement_profile":
             scrapedData.placementProfile = html;
             break;
+        case "timetable":
+            scrapedData.timetable = html;
+            break;
         default:
             break;
     }
@@ -615,6 +619,7 @@ const buildSubPageUrlTargets = (courseRows: Course[]): Map<string, any[]> => {
         ["https://parents.msrit.edu/newparents/index.php?option=com_placement&controller=placement&task=placementstatus", "PLACEMENT", "placement_status"],
         ["https://parents.msrit.edu/newparents/index.php?option=com_placement&controller=placement&task=placementresults", "PLACEMENT", "placement_results"],
         ["https://parents.msrit.edu/newparents/index.php?option=com_placement&controller=placement&task=getBasicprofiledetails", "PLACEMENT", "placement_profile"],
+        ["https://parents.msrit.edu/newparents/index.php?option=com_studentdashboard&controller=studentdashboard&task=timetable", "TIMETABLE", "timetable"],
     ];
 
     for (const [url, courseCode, type] of fixedTargets) {
@@ -733,7 +738,195 @@ const getCompleteStudentData = async (
     }
 };
 
+// ---- Timetable Parser ----
+const parseTimetableHtml = (html: string): any => {
+    if (!html) return null;
+    const $ = cheerio.load(html);
+
+    const days: any[] = [];
+    let weekStart = "";
+
+    const parseTableRows = ($table: any): any[] => {
+        const classes: any[] = [];
+        const seen = new Set<string>();
+
+        // Use tbody tr if exists, otherwise all tr
+        const rows = $table.find('tbody tr').length > 0 
+            ? $table.find('tbody tr') 
+            : $table.find('tr');
+
+        rows.each((_: any, row: any) => {
+            const $row = $(row);
+            // Skip header rows with th
+            if ($row.find('th').length > 0) return;
+            const cols = $row.find('td');
+            if (cols.length < 2) return;
+
+            const timeText = $(cols[0]).text().trim();
+            const courseText = $(cols[1]).text().trim();
+            const faculty = cols.length > 2 ? $(cols[2]).text().trim() : "";
+            const room = cols.length > 3 ? $(cols[3]).text().trim() : "";
+            const batch = cols.length > 4 ? $(cols[4]).text().trim() : "";
+
+            const timeMatch = timeText.match(/(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/);
+            if (!timeMatch) return;
+
+            const courseMatch = courseText.match(/^([A-Z0-9]+)\s*-\s*(.+)$/i);
+            const courseCode = courseMatch ? courseMatch[1].trim() : "";
+            const courseName = courseMatch ? courseMatch[2].trim() : courseText;
+
+            const key = `${timeMatch[1]}-${timeMatch[2]}-${courseCode}-${batch}-${room}`;
+            if (seen.has(key)) return;
+            seen.add(key);
+
+            classes.push({
+                time_start: timeMatch[1],
+                time_end: timeMatch[2],
+                course_code: courseCode,
+                course_name: courseName,
+                faculty,
+                room,
+                batch
+            });
+        });
+
+        classes.sort((a, b) => a.time_start.localeCompare(b.time_start));
+        return classes;
+    };
+
+    // 1. Primary Strategy: Check .cn-timetable-list containers and tables with caption
+    const timetableContainers = $('.cn-timetable-list, .uk-card, [class*="card"], .uk-panel');
+    let foundDays = false;
+
+    if (timetableContainers.length > 0) {
+        timetableContainers.each((_: any, containerEl: any) => {
+            const $container = $(containerEl);
+            const $table = $container.is('table') ? $container : $container.find('table').first();
+            if ($table.length === 0) return;
+            // Skip outer layout tables that contain nested tables
+            if ($table.find('table').length > 0) return;
+
+            // Day title can be in caption, headers, or container text
+            const captionText = $table.find('caption').text().trim() ||
+                $container.find('h1, h2, h3, h4, .uk-card-title, [class*="title"], [class*="header"]').first().text().trim() ||
+                $container.clone().children('table').remove().end().text().trim();
+
+            const dayMatch = captionText.match(/\b(MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY)\b/i);
+            if (!dayMatch) return;
+
+            const dayName = dayMatch[1].toUpperCase();
+            const dateMatch = captionText.match(/(\d{2}-\d{2}-\d{4})/);
+            const dayDate = dateMatch ? dateMatch[1] : "";
+
+            if (dayName === "MONDAY" && dayDate && !weekStart) {
+                weekStart = dayDate;
+            }
+
+            const classes = parseTableRows($table);
+            if (classes.length > 0) {
+                foundDays = true;
+                days.push({
+                    day: dayName,
+                    date: dayDate,
+                    classes
+                });
+            }
+        });
+    }
+
+    // 2. Fallback: If no days found yet, scan tables directly
+    if (!foundDays) {
+        $('table').each((_: any, table: any) => {
+            const $table = $(table);
+            // Skip tables with nested tables
+            if ($table.find('table').length > 0) return;
+
+            const headers: string[] = [];
+            $table.find('thead th, tr:first-child th, tr:first-child td').each((_: any, th: any) => {
+                headers.push($(th).text().trim().toUpperCase());
+            });
+
+            if (!headers.some((h: string) => h.includes('TIME') || h.includes('COURSE'))) return;
+
+            // Check caption first
+            let dayName = "";
+            let dayDate = "";
+
+            const captionText = $table.find('caption').text().trim();
+            const capMatch = captionText.match(/\b(MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY)\b/i);
+            if (capMatch) {
+                dayName = capMatch[1].toUpperCase();
+                const dm = captionText.match(/(\d{2}-\d{2}-\d{4})/);
+                if (dm) dayDate = dm[1];
+            }
+
+            // If caption didn't have it, look at immediate container/preceding text (without traversing into other tables)
+            if (!dayName) {
+                let prev = $table.prev();
+                while (prev.length && !dayName && !prev.is('table') && prev.find('table').length === 0) {
+                    const text = prev.text().trim();
+                    const m = text.match(/\b(MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY)\b/i);
+                    if (m) {
+                        dayName = m[1].toUpperCase();
+                        const dm = text.match(/(\d{2}-\d{2}-\d{4})/);
+                        if (dm) dayDate = dm[1];
+                    }
+                    prev = prev.prev();
+                }
+            }
+
+            if (!dayName) return;
+
+            if (dayName === "MONDAY" && dayDate && !weekStart) {
+                weekStart = dayDate;
+            }
+
+            const classes = parseTableRows($table);
+            if (classes.length > 0) {
+                days.push({
+                    day: dayName,
+                    date: dayDate,
+                    classes
+                });
+            }
+        });
+    }
+
+    if (days.length === 0) return null;
+
+    // Deduplicate days by day name and merge classes
+    const uniqueDaysMap = new Map<string, any>();
+    for (const d of days) {
+        if (!uniqueDaysMap.has(d.day)) {
+            uniqueDaysMap.set(d.day, { ...d, classes: [...d.classes] });
+        } else {
+            const existing = uniqueDaysMap.get(d.day)!;
+            if (!existing.date && d.date) existing.date = d.date;
+            const seenKeys = new Set(existing.classes.map((c: any) => `${c.time_start}-${c.time_end}-${c.course_code}-${c.batch}-${c.room}`));
+            for (const cls of d.classes) {
+                const key = `${cls.time_start}-${cls.time_end}-${cls.course_code}-${cls.batch}-${cls.room}`;
+                if (!seenKeys.has(key)) {
+                    existing.classes.push(cls);
+                    seenKeys.add(key);
+                }
+            }
+            existing.classes.sort((a: any, b: any) => a.time_start.localeCompare(b.time_start));
+        }
+    }
+
+    const mergedDays = [...uniqueDaysMap.values()];
+    const dayOrder = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
+    mergedDays.sort((a, b) => dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day));
+
+    return {
+        week_start: weekStart,
+        scraped_at: new Date().toISOString(),
+        days: mergedDays
+    };
+};
+
 const parseAndProcessData = (scrapedData: any) => {
+
     if (!scrapedData) return null;
 
     const $dash = cheerio.load(scrapedData.dashboard);
@@ -865,6 +1058,8 @@ const parseAndProcessData = (scrapedData: any) => {
         });
     });
 
+    const timetableData = parseTimetableHtml(scrapedData.timetable || "");
+
     const studentRecord = {
         name,
         usn,
@@ -878,7 +1073,8 @@ const parseAndProcessData = (scrapedData: any) => {
             eligibilityEvents: parsePlacementEvents(scrapedData.placementEligibility),
             inProgressEvents: parsePlacementEvents(scrapedData.placementStatus),
             completedEvents: parsePlacementEvents(scrapedData.placementResults)
-        }
+        },
+        timetable: timetableData
     };
 
     const normalized = DataNormalizer.normalizeStudentRecord(studentRecord);

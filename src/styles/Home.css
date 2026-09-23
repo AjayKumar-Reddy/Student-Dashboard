@@ -1,0 +1,875 @@
+/* ==========================================================================
+   Home Section Styles — Clean, Symmetrical & High Legibility
+   ========================================================================== */
+
+.home-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+}
+
+/* ───────────────── 1. Professional Profile Card ───────────────── */
+.home-profile-card {
+    background: var(--bg-secondary, rgba(13, 21, 36, 0.78));
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+    border-radius: 16px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.22);
+    animation: profileCardIn 0.4s ease-out both;
+}
+
+@keyframes profileCardIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Top Row: Avatar + Name + Update Button */
+.home-profile-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.home-profile-identity {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+}
+
+/* Initials Avatar */
+.home-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #00ADB5 0%, #0284C7 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 4px 14px rgba(0, 173, 181, 0.25);
+    animation: avatarPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
+}
+
+@keyframes avatarPop {
+    from { opacity: 0; transform: scale(0.6); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.home-avatar-text {
+    font-size: 19px;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: 1px;
+    line-height: 1;
+    user-select: none;
+}
+
+/* Name + USN */
+.home-profile-greeting {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.home-profile-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary, #F8FAFC);
+    margin: 0;
+    line-height: 1.3;
+    letter-spacing: -0.3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.home-profile-usn {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text-muted, #94A3B8);
+    letter-spacing: 0.5px;
+}
+
+/* Divider Line */
+.home-profile-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.08) 20%, rgba(0,173,181,0.15) 50%, rgba(255,255,255,0.08) 80%, transparent 100%);
+    margin: 18px 0 16px 0;
+}
+
+/* Info Grid */
+.home-profile-info {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.home-info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 14px;
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    transition: border-color 0.2s ease, background 0.2s ease;
+    animation: infoSlideUp 0.35s ease-out both;
+}
+
+@keyframes infoSlideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.home-info-item:hover {
+    border-color: rgba(0, 173, 181, 0.2);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.home-info-label {
+    font-size: 10.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-muted, #94A3B8);
+    line-height: 1;
+}
+
+.home-info-value {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary, #F8FAFC);
+    line-height: 1.3;
+    word-break: break-word;
+}
+
+.home-info-highlight {
+    color: var(--accent-primary, #00ADB5);
+    font-weight: 700;
+    font-size: 17px;
+}
+
+.home-info-sub {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted, #94A3B8);
+    margin-left: 1px;
+}
+
+
+/* ───────────────── 2. Class Schedule / Timetable Widget ───────────────── */
+.home-timetable-card {
+    background: var(--bg-secondary, rgba(13, 21, 36, 0.78));
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+    border-radius: 16px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.22);
+    animation: profileCardIn 0.4s ease-out 0.08s both;
+}
+
+.home-tt-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.home-tt-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.home-tt-icon-pod {
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+    background: linear-gradient(135deg, rgba(0, 173, 181, 0.12) 0%, rgba(2, 132, 199, 0.08) 100%);
+    border: 1px solid rgba(0, 173, 181, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent-primary, #00ADB5);
+    flex-shrink: 0;
+}
+
+.home-tt-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary, #F8FAFC);
+    margin: 0;
+    letter-spacing: -0.2px;
+}
+
+/* Live Clock Display */
+.home-live-clock {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted, #94a3b8);
+    margin-top: 2px;
+    font-weight: 500;
+}
+
+.home-clock-date {
+    color: var(--text-secondary, #cbd5e1);
+}
+
+.home-clock-sep {
+    color: rgba(255, 255, 255, 0.18);
+    font-size: 14px;
+}
+
+.home-clock-time {
+    color: var(--accent-primary, #00ADB5);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.home-tt-header-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* Batch Selector */
+.home-batch-control {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 5px 10px;
+}
+
+.home-batch-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted, #94a3b8);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.home-batch-select {
+    background: transparent;
+    border: none;
+    color: var(--text-primary, #ffffff);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    outline: none;
+}
+
+.home-batch-select option {
+    background: #0f172a;
+    color: #ffffff;
+}
+
+.home-tt-view-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-primary, #ffffff);
+    padding: 7px 14px;
+    border-radius: 9px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.home-tt-view-btn:hover {
+    background: rgba(0, 173, 181, 0.1);
+    border-color: rgba(0, 173, 181, 0.3);
+    color: var(--accent-primary, #00ADB5);
+}
+
+/* Finished All Classes Today Card */
+.home-classes-finished-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.06) 0%, rgba(16, 185, 129, 0.02) 100%);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    border-radius: 12px;
+    animation: infoSlideUp 0.3s ease-out 0.15s both;
+}
+
+.home-finished-icon-wrap {
+    color: #10b981;
+    flex-shrink: 0;
+}
+
+.home-finished-text h4 {
+    margin: 0 0 2px 0;
+    color: #F8FAFC;
+    font-size: 14.5px;
+    font-weight: 700;
+}
+
+.home-finished-text p {
+    margin: 0;
+    color: var(--text-muted, #94a3b8);
+    font-size: 12.5px;
+}
+
+/* Next Classes Grid */
+.home-next-classes-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.home-class-tile {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: border-color 0.2s ease, background 0.2s ease;
+    animation: infoSlideUp 0.35s ease-out both;
+}
+
+.home-class-tile:hover {
+    border-color: rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.035);
+}
+
+.home-class-tile.ongoing-class {
+    border-color: rgba(99, 102, 241, 0.4);
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(255, 255, 255, 0.015) 100%);
+    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.1);
+}
+
+.home-class-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+/* Time Badge */
+.home-card-time-badge {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    background: transparent;
+    border: none;
+    padding: 0;
+}
+
+.home-card-time-start {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent-primary, #00ADB5);
+    line-height: 1.15;
+}
+
+.home-card-time-sep {
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--text-muted, #94a3b8);
+    line-height: 1;
+    margin: 1px 0;
+}
+
+.home-card-time-end {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-primary, #F8FAFC);
+    line-height: 1.15;
+}
+
+.home-class-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    padding: 3px 8px;
+    border-radius: 6px;
+}
+
+.home-class-status-pill.ongoing {
+    background: rgba(99, 102, 241, 0.15);
+    border: 1px solid rgba(99, 102, 241, 0.35);
+    color: #a5b4fc;
+}
+
+.home-class-status-pill.upcoming {
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.22);
+    color: #fbbf24;
+}
+
+.home-class-live-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #818cf8;
+    box-shadow: 0 0 6px #6366f1;
+    animation: livePulse 1.5s infinite;
+}
+
+@keyframes livePulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.3; transform: scale(0.8); }
+}
+
+.home-class-main {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.home-class-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary, #F8FAFC);
+    margin: 0;
+    line-height: 1.35;
+    word-break: break-word;
+}
+
+.home-class-code-tag {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent-primary, #00ADB5);
+    letter-spacing: 0.3px;
+}
+
+.home-class-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-top: 2px;
+    font-size: 11px;
+    color: var(--text-muted, #94a3b8);
+}
+
+.home-class-meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.home-empty-schedule {
+    padding: 28px 20px;
+    text-align: center;
+    color: var(--text-muted, #94a3b8);
+    font-size: 13px;
+    background: rgba(255, 255, 255, 0.015);
+    border-radius: 12px;
+    border: 1px dashed rgba(255, 255, 255, 0.07);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+
+/* ───────────────── 3. Full Timetable Expander ───────────────── */
+.home-full-timetable-wrap {
+    margin-top: 4px;
+    padding-top: 18px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    animation: fadeInExpand 0.25s ease-out;
+}
+
+@keyframes fadeInExpand {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.home-tt-day-tabs {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.home-tt-day-tab {
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    color: var(--text-muted, #94a3b8);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+}
+
+.home-tt-day-tab:hover {
+    color: var(--text-primary, #F8FAFC);
+    border-color: rgba(255, 255, 255, 0.16);
+}
+
+.home-tt-day-tab.active {
+    background: rgba(0, 173, 181, 0.12);
+    color: var(--accent-primary, #00ADB5);
+    border-color: rgba(0, 173, 181, 0.25);
+    font-weight: 700;
+    box-shadow: none;
+}
+
+.home-tt-day-tab.today:not(.active) {
+    border-color: rgba(0, 173, 181, 0.35);
+    color: var(--accent-primary, #00ADB5);
+}
+
+.home-tt-classes-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Timetable Period Row */
+.home-tt-period-row {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 11px;
+    padding: 14px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.home-tt-period-row:hover {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.home-tt-period-row.ongoing-period {
+    border-color: rgba(99, 102, 241, 0.35);
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.06) 0%, rgba(255, 255, 255, 0.01) 100%);
+}
+
+/* Column 1: Course Info */
+.home-tt-period-left {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex: 1;
+    min-width: 0;
+}
+
+.home-tt-period-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary, #F8FAFC);
+    margin: 0;
+    line-height: 1.35;
+    word-break: break-word;
+}
+
+.home-tt-period-code {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent-primary, #00ADB5);
+    margin-top: 1px;
+}
+
+.home-tt-period-meta {
+    font-size: 11px;
+    color: var(--text-muted, #94a3b8);
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-top: 3px;
+}
+
+.home-meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.home-batch-chip {
+    font-size: 10px;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    padding: 1px 7px;
+    border-radius: 5px;
+    color: #cbd5e1;
+}
+
+/* Column 2: Time Badge (Middle) */
+.home-tt-period-middle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    min-width: 130px;
+    text-align: center;
+}
+
+.home-period-time-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    padding: 0;
+    min-width: auto;
+}
+
+.home-time-start-hl {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent-primary, #00ADB5);
+    line-height: 1.2;
+}
+
+.home-time-to-sub {
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted, #94a3b8);
+    line-height: 1.1;
+    margin: 1px 0;
+}
+
+.home-time-end-hl {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-primary, #F8FAFC);
+    line-height: 1.2;
+}
+
+/* Column 3: Room + Status */
+.home-tt-period-right {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-shrink: 0;
+    text-align: right;
+    min-width: 110px;
+}
+
+.home-tt-room-end {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary, #cbd5e1);
+    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    padding: 5px 10px;
+    border-radius: 7px;
+    white-space: nowrap;
+}
+
+/* ───────────────── 4. Mobile Responsiveness ───────────────── */
+@media (max-width: 768px) {
+    .home-container {
+        gap: 14px;
+    }
+
+    /* Profile Card Mobile */
+    .home-profile-card {
+        padding: 18px 16px;
+    }
+
+    .home-avatar {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+    }
+
+    .home-avatar-text {
+        font-size: 16px;
+    }
+
+    .home-profile-name {
+        font-size: 16px;
+    }
+
+    .home-profile-usn {
+        font-size: 11.5px;
+    }
+
+    .home-profile-divider {
+        margin: 14px 0 12px 0;
+    }
+
+    .home-profile-info {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+
+    .home-info-item {
+        padding: 10px 12px;
+    }
+
+    .home-info-label {
+        font-size: 10px;
+    }
+
+    .home-info-value {
+        font-size: 13.5px;
+    }
+
+    .home-info-highlight {
+        font-size: 15px;
+    }
+
+    /* Timetable Card Mobile */
+    .home-timetable-card {
+        padding: 18px 16px;
+        gap: 14px;
+    }
+
+    .home-tt-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .home-tt-header-controls {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .home-next-classes-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .home-class-tile {
+        padding: 14px;
+    }
+
+    .home-class-name {
+        font-size: 13.5px;
+    }
+
+    /* Timetable row on mobile: grid layout with time at right end (from on top, to below) */
+    .home-tt-period-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px 12px;
+        align-items: start;
+        padding: 12px 14px;
+    }
+
+    .home-tt-period-left {
+        grid-column: 1;
+        grid-row: 1;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .home-tt-period-middle {
+        grid-column: 2;
+        grid-row: 1;
+        width: auto;
+        min-width: 0;
+        display: flex;
+        justify-content: flex-end;
+        align-self: center;
+    }
+
+    .home-period-time-badge {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1px;
+        padding: 0;
+        min-width: auto;
+        background: transparent;
+        border: none;
+        text-align: center;
+    }
+
+    .home-time-start-hl {
+        font-size: 11.5px;
+        font-weight: 700;
+        color: var(--accent-primary, #00ADB5);
+        line-height: 1.2;
+    }
+
+    .home-time-to-sub {
+        font-size: 8px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--text-muted, #94a3b8);
+        line-height: 1;
+        margin: 1px 0;
+    }
+
+    .home-time-end-hl {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--text-primary, #F8FAFC);
+        line-height: 1.2;
+    }
+
+    .home-tt-period-right {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-top: 8px;
+        border-top: 1px dashed rgba(255, 255, 255, 0.05);
+        min-width: 0;
+    }
+
+    .home-tt-period-right:empty {
+        display: none;
+        padding-top: 0;
+        border-top: none;
+    }
+
+    .home-tt-period-right .home-tt-room-end {
+        margin-left: auto;
+        font-size: 11px;
+        padding: 3px 8px;
+    }
+}
+

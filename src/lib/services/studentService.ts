@@ -70,6 +70,7 @@ export class StudentService {
       current_semester: studentData.current_semester,
       exam_history: studentData.exam_history || [],
       placement: studentData.placement || null,
+      timetable: studentData.timetable || null,
       auth_type: authType,
       encrypted_pin: encryptedPin,
     };

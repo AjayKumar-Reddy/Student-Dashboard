@@ -1308,8 +1308,14 @@
     }
 
     .history-card .dashboard-table {
-        min-width: 450px;
-        /* Force minimum table width to ensure data wrap isn't ugly */
+        min-width: 0;
+        width: 100%;
+        table-layout: fixed;
+    }
+
+    .history-card .dashboard-table-container {
+        overflow-x: hidden;
+        width: 100%;
     }
 
     .history-tab-container {
@@ -2625,30 +2631,20 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.2);
 }
 
-.dropdown-glass-btn.tour {
-    background: rgba(0, 173, 181, 0.12);
-    color: #7DD3FC;
-    border-color: rgba(0, 173, 181, 0.35);
-    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.15);
-}
-
-.dropdown-glass-btn.tour:hover {
-    background: rgba(0, 173, 181, 0.22);
-    border-color: rgba(0, 173, 181, 0.60);
-    box-shadow: 0 4px 16px rgba(0, 173, 181, 0.28), inset 0 1px 1px rgba(255, 255, 255, 0.3);
-}
-
+.dropdown-glass-btn.tour,
 .dropdown-glass-btn.install {
-    background: rgba(2, 132, 199, 0.14);
-    color: #7DD3FC;
-    border-color: rgba(2, 132, 199, 0.35);
-    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.15);
+    background: transparent;
+    color: var(--text-secondary, #cbd5e1);
+    border-color: transparent;
+    box-shadow: none;
 }
 
+.dropdown-glass-btn.tour:hover,
 .dropdown-glass-btn.install:hover {
-    background: rgba(2, 132, 199, 0.24);
-    border-color: rgba(2, 132, 199, 0.60);
-    box-shadow: 0 4px 16px rgba(2, 132, 199, 0.28), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-primary, #ffffff);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: none;
 }
 
 .dropdown-glass-btn.logout {
