@@ -4,7 +4,7 @@ import React, { useEffect, useState, useMemo, useRef, useCallback } from "react"
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import axios from "axios";
 import {
-    Target, Award, Menu, X, Gamepad2, LogOut, Briefcase, Compass, Download, Trash2, Github, Calendar, UserCheck
+    Target, Award, Menu, X, Gamepad2, LogOut, Briefcase, Compass, Download, Trash2, Github, Calendar, UserCheck, Home
 } from "lucide-react";
 import "@/styles/StudentDashboard.css";
 import { API_BASE_URL } from "@/config/api.config";
@@ -19,8 +19,7 @@ import { useCooldown } from "@/hooks/useCooldown";
 // Section Components
 import AttendanceSection from "@/components/dashboard/sections/AttendanceSection";
 import MarksSection from "@/components/dashboard/sections/MarksSection";
-import TimetableSection from "@/components/dashboard/sections/TimetableSection";
-import PerformanceSection from "@/components/dashboard/sections/PerformanceSection";
+import HomeSection from "@/components/dashboard/sections/HomeSection";
 import PlacementSection from "@/components/dashboard/sections/PlacementSection";
 import SimulatorSection from "@/components/dashboard/sections/SimulatorSection";
 import LoadingScreen from "@/components/dashboard/LoadingScreen";
@@ -60,7 +59,7 @@ export default function StudentDashboard() {
     // 1b. Route-aware Tab State with Zero-Latency Response
     const searchParams = useSearchParams();
     const pathname = usePathname();
-    const [activeTab, setActiveTab] = useState<string>(() => searchParams.get('tab') || 'attendance');
+    const [activeTab, setActiveTab] = useState<string>(() => searchParams.get('tab') || 'home');
 
     useEffect(() => {
         const tabParam = searchParams.get('tab');
@@ -422,10 +421,9 @@ export default function StudentDashboard() {
 
                 <nav className="sidebar-navigation">
                     {[
+                        { id: 'home', icon: <Home size={20} />, label: 'Home' },
                         { id: 'attendance', icon: <UserCheck size={20} />, label: 'Attendance' },
                         { id: 'marks', icon: <Award size={20} />, label: 'Marks' },
-                        { id: 'timetable', icon: <Calendar size={20} />, label: 'Timetable' },
-                        { id: 'performance', icon: <Target size={20} />, label: 'Current Semester' },
                         { id: 'placement', icon: <Briefcase size={20} />, label: 'Placements' },
                         { id: 'simulator', icon: <Gamepad2 size={20} />, label: 'Simulator' },
                     ].map(tab => (
@@ -579,20 +577,15 @@ export default function StudentDashboard() {
                                     onSelectSubject={(subject) => setSelectedSubject(subject)}
                                 />
                             )}
-                            {activeTab === 'timetable' && (
-                                <TimetableSection
-                                    studentName={student?.name}
-                                    timetableData={detailsBlob.timetable}
-                                />
-                            )}
-                            {activeTab === 'performance' && (
-                                <PerformanceSection
+                            {(activeTab === 'home' || activeTab === 'performance' || activeTab === 'timetable') && (
+                                <HomeSection
                                     student={student}
                                     currentSem={currentSem}
                                     overallAttendance={overallAttendance}
                                     totalCredits={totalCredits}
                                     maxCredits={maxCredits}
                                     currentCgpa={currentCgpa}
+                                    timetableData={detailsBlob.timetable}
                                     onSelectSubject={(subject) => setSelectedSubject(subject)}
                                     handleUpdate={handleUpdate}
                                     updateStatus={updateStatus}
@@ -602,6 +595,7 @@ export default function StudentDashboard() {
                                     latestSGPA={latestSGPA}
                                     sgpaDiff={(latestSGPA - prevSGPA >= 0 ? "+" : "") + (latestSGPA - prevSGPA).toFixed(2)}
                                     isImproved={latestSGPA >= prevSGPA}
+                                    initialShowFullTimetable={activeTab === 'timetable'}
                                 />
                             )}
                             {activeTab === 'placement' && (
@@ -636,10 +630,9 @@ export default function StudentDashboard() {
             {/* Mobile Bottom Navigation */}
             <nav className="mobile-bottom-nav">
                 {[
+                    { id: 'home', icon: <Home size={20} />, label: 'Home' },
                     { id: 'attendance', icon: <UserCheck size={20} />, label: 'Attendance' },
                     { id: 'marks', icon: <Award size={20} />, label: 'Marks' },
-                    { id: 'timetable', icon: <Calendar size={20} />, label: 'Timetable' },
-                    { id: 'performance', icon: <Target size={20} />, label: 'Semester' },
                     { id: 'placement', icon: <Briefcase size={20} />, label: 'Placements' },
                     { id: 'simulator', icon: <Gamepad2 size={20} />, label: 'Sim' },
                 ].map(tab => (
