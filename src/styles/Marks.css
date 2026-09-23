@@ -1,0 +1,307 @@
+/* Marks Section Styles */
+.marks-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    width: 100%;
+}
+
+/* Sub-Tab Navigation Switcher */
+.marks-subtab-bar {
+    display: inline-flex;
+    background: var(--bg-secondary, rgba(17, 24, 39, 0.7));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+    padding: 5px;
+    border-radius: 12px;
+    gap: 4px;
+    align-self: flex-start;
+}
+
+.marks-subtab-btn {
+    background: transparent;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted, #94a3b8);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+}
+
+.marks-subtab-btn:hover {
+    color: var(--text-primary, #ffffff);
+}
+
+.marks-subtab-btn.active {
+    background: var(--accent-primary, #00ADB5);
+    color: #0f172a;
+    box-shadow: 0 4px 14px rgba(0, 173, 181, 0.35);
+}
+
+/* Stats Overview */
+.marks-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    width: 100%;
+}
+
+.marks-stat-card {
+    background: var(--bg-secondary, rgba(17, 24, 39, 0.7));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+    border-radius: 14px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: all 0.25s ease;
+}
+
+.marks-stat-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(0, 173, 181, 0.3);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.marks-stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.marks-stat-icon.cyan {
+    background: rgba(0, 173, 181, 0.12);
+    color: var(--accent-primary, #00ADB5);
+    border: 1px solid rgba(0, 173, 181, 0.25);
+}
+
+.marks-stat-icon.purple {
+    background: rgba(139, 92, 246, 0.12);
+    color: #8b5cf6;
+    border: 1px solid rgba(139, 92, 246, 0.25);
+}
+
+.marks-stat-icon.green {
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.marks-stat-icon.amber {
+    background: rgba(245, 158, 11, 0.12);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.marks-stat-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.marks-stat-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted, #94a3b8);
+}
+
+.marks-stat-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-primary, #ffffff);
+    margin-top: 4px;
+}
+
+/* CIE Subject Cards Grid */
+.cie-subjects-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 18px;
+}
+
+.cie-card {
+    background: var(--bg-secondary, rgba(17, 24, 39, 0.7));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+    border-radius: 14px;
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    transition: all 0.25s ease;
+}
+
+.cie-card:hover {
+    border-color: rgba(0, 173, 181, 0.3);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    transform: translateY(-2px);
+}
+
+.cie-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.cie-subj-code {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--accent-primary, #00ADB5);
+    background: rgba(0, 173, 181, 0.1);
+    padding: 3px 8px;
+    border-radius: 6px;
+    display: inline-block;
+    margin-bottom: 6px;
+}
+
+.cie-subj-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary, #ffffff);
+    line-height: 1.35;
+    margin: 0;
+}
+
+.cie-score-badge {
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.cie-score-main {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--accent-primary, #00ADB5);
+    line-height: 1;
+}
+
+.cie-score-max {
+    font-size: 12px;
+    color: var(--text-muted, #94a3b8);
+    font-weight: 500;
+}
+
+/* Test & Quiz Breakdown */
+.cie-assessments-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    padding: 12px;
+}
+
+.cie-ass-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.cie-ass-name {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted, #94a3b8);
+    margin-bottom: 4px;
+}
+
+.cie-ass-score {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary, #ffffff);
+}
+
+.cie-ass-score.t1 { color: #adc6ff; }
+.cie-ass-score.t2 { color: #ffb690; }
+.cie-ass-score.aq1 { color: #4edea3; }
+.cie-ass-score.aq2 { color: #ffb4ab; }
+
+.cie-ass-max {
+    font-size: 10px;
+    color: var(--text-muted, #64748b);
+}
+
+/* Average vs Student Comparison */
+.cie-avg-comparison {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12px;
+}
+
+.cie-avg-labels {
+    display: flex;
+    justify-content: space-between;
+    color: var(--text-muted, #94a3b8);
+}
+
+/* SEE (Exam History) Merged View */
+.see-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+}
+
+.see-sem-selector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+}
+
+.see-sem-chip {
+    background: var(--bg-secondary, rgba(17, 24, 39, 0.7));
+    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted, #94a3b8);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+}
+
+.see-sem-chip:hover {
+    color: var(--text-primary, #ffffff);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.see-sem-chip.active {
+    background: var(--accent-primary, #00ADB5);
+    color: #0f172a;
+    border-color: transparent;
+    box-shadow: 0 4px 12px rgba(0, 173, 181, 0.35);
+}
+
+@media (max-width: 768px) {
+    .cie-subjects-grid {
+        grid-template-columns: 1fr;
+    }
+    .marks-subtab-bar {
+        width: 100%;
+        display: flex;
+    }
+    .marks-subtab-btn {
+        flex: 1;
+        justify-content: center;
+    }
+}

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Award, BookOpen, Layers, Calendar, TrendingUp, CalendarClock, Sparkles } from "lucide-react";
+import { Award, BookOpen, Layers, Calendar, TrendingUp, Sparkles } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import { UpdateButton } from "@/components/dashboard/UpdateButton";
 
@@ -23,36 +23,10 @@ interface PerformanceSectionProps {
     isImproved: boolean;
 }
 
-const CHART_COLORS = [
-    'var(--accent-primary)', '#6366F1', '#10b981', '#f59e0b', '#ef4444', 
-    '#ec4899', '#3b82f6', '#14b8a6',
-];
-
 import { 
-    RadialBarChart, RadialBar, PolarAngleAxis, Tooltip, ResponsiveContainer, 
+    Tooltip, ResponsiveContainer, 
     BarChart, Bar, XAxis, YAxis, CartesianGrid 
 } from "recharts";
-
-const AttendanceTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-        const data = payload[0].payload;
-        return (
-            <div className="custom-chart-tooltip" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}>
-                <p className="tooltip-title">{data.name}</p>
-                <div className="tooltip-divider"></div>
-                <div className="tooltip-row">
-                    <span className="tooltip-label">Code</span>
-                    <span className="tooltip-value">{data.code}</span>
-                </div>
-                <div className="tooltip-row">
-                    <span className="tooltip-label">Attendance</span>
-                    <span className="tooltip-value" style={{ color: data.fill || 'var(--accent-primary)' }}>{data.attendance}%</span>
-                </div>
-            </div>
-        );
-    }
-    return null;
-};
 
 const MarksTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
@@ -92,12 +66,6 @@ const PerformanceSection: React.FC<PerformanceSectionProps> = ({
     sgpaDiff,
     isImproved
 }) => {
-    const hasAttendanceData = currentSem.length > 0 && currentSem.some((s: any) => 
-        (s.attendance && s.attendance > 0) || 
-        (s.attendance_details?.present && s.attendance_details.present > 0) || 
-        (s.attendance_details?.absent && s.attendance_details.absent > 0)
-    );
-    
     const hasMarksData = currentSem.length > 0 && currentSem.some((s: any) => 
         (s.marks && s.marks > 0) || 
         (s.assessments && s.assessments.length > 0)
@@ -168,80 +136,6 @@ const PerformanceSection: React.FC<PerformanceSectionProps> = ({
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-                <div className="chart-card">
-                    <div className="chart-header">
-                        <h3 className="chart-title">Attendance Overview</h3>
-                        <p className="chart-subtitle">Subject-wise attendance distribution</p>
-                    </div>
-                    <div className="chart-body attendance-chart-body">
-                        {hasAttendanceData ? (
-                            <>
-                                <div className="chart-container">
-                                    <ResponsiveContainer width="100%" height={380}>
-                                        <RadialBarChart 
-                                            cx="50%" 
-                                            cy="50%" 
-                                            innerRadius="25%" 
-                                            outerRadius="100%" 
-                                            barSize={12} 
-                                            data={currentSem.map((s: any, i: number) => ({ 
-                                                ...s, 
-                                                attendance: Math.round(Number(s.attendance) || 0),
-                                                fill: CHART_COLORS[i % CHART_COLORS.length] 
-                                            }))}
-                                            startAngle={90}
-                                            endAngle={-270}
-                                        >
-                                            <PolarAngleAxis 
-                                                type="number" 
-                                                domain={[0, 100]} 
-                                                angleAxisId={0} 
-                                                tick={false} 
-                                            />
-                                            <RadialBar 
-                                                background={{ fill: 'var(--bg-primary)' }} 
-                                                dataKey="attendance" 
-                                                cornerRadius={20} 
-                                                angleAxisId={0}
-                                                onClick={(d: any) => onSelectSubject(d.payload)} 
-                                            />
-                                            <Tooltip content={<AttendanceTooltip />} cursor={{ fill: 'var(--bg-primary)' }} />
-                                        </RadialBarChart>
-                                    </ResponsiveContainer>
-                                </div>
-                                <div className="chart-legend-custom">
-                                    {currentSem.map((s: any, i: number) => (
-                                        <button type="button" key={s.code || s.name || i} className="legend-item-custom" onClick={() => onSelectSubject(s)}>
-                                            <div className="legend-dot-custom" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}></div>
-                                            <span className="legend-label-custom">{s.name}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            </>
-                        ) : (
-                            <div className="dashboard-empty-state">
-                                <div className="empty-state-icon-wrap">
-                                    <CalendarClock size={26} />
-                                </div>
-                                <h4 className="empty-state-title">Attendance Not Yet Recorded</h4>
-                                <p className="empty-state-desc">
-                                    Daily attendance will appear here once classes begin.
-                                </p>
-                                {currentSem.length > 0 && (
-                                    <div className="empty-state-chips">
-                                        {currentSem.map((s: any, idx: number) => (
-                                            <button type="button" key={s.code || s.name || idx} className="empty-state-chip" onClick={() => onSelectSubject(s)} title="Click for details">
-                                                <span className="empty-state-chip-dot" />
-                                                <span>{s.name || s.code}</span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                </div>
-
                 <div className="chart-card">
                     <div className="chart-header">
                         <div>

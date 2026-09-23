@@ -1,0 +1,328 @@
+/* Attendance Section Styles */
+.attendance-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+}
+
+/* Calculator & Target Selector Card */
+.att-calculator-card {
+    background: var(--bg-secondary, rgba(17, 24, 39, 0.7));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+    border-radius: 14px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.att-calc-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary, #ffffff);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.att-threshold-selector {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(0, 0, 0, 0.25);
+    padding: 3px;
+    border-radius: 9px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    flex-wrap: wrap;
+}
+
+.att-threshold-btn {
+    background: transparent;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted, #94a3b8);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.att-threshold-btn:hover {
+    color: var(--text-primary, #ffffff);
+}
+
+.att-threshold-btn.active {
+    background: var(--accent-primary, #00ADB5);
+    color: #0f172a;
+    box-shadow: 0 2px 8px rgba(0, 173, 181, 0.35);
+}
+
+/* Attendance Table Card */
+.att-table-card {
+    background: var(--bg-secondary, rgba(17, 24, 39, 0.7));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+    border-radius: 14px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    width: 100%;
+}
+
+.att-table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.att-table-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary, #ffffff);
+}
+
+.att-table-count {
+    font-size: 12px;
+    color: var(--text-muted, #94a3b8);
+}
+
+.att-table-responsive {
+    width: 100%;
+    overflow-x: hidden; /* No horizontal scroll! Fits 100% on mobile & desktop */
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.att-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    table-layout: fixed; /* Strictly enforces responsive column percentages */
+}
+
+.att-table thead th {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 12px 14px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted, #94a3b8);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Column Specific Alignment & Sizing */
+.att-col-subject,
+.att-cell-subject {
+    text-align: left;
+    width: 52%;
+}
+
+.att-col-attendance,
+.att-cell-attendance {
+    text-align: center;
+    width: 23%;
+}
+
+.att-col-margin,
+.att-cell-margin {
+    text-align: right;
+    width: 25%;
+}
+
+.att-table tbody tr {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    transition: background 0.18s ease;
+    cursor: pointer;
+}
+
+.att-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.att-table tbody tr:hover {
+    background: rgba(0, 173, 181, 0.05);
+}
+
+.att-table tbody td {
+    padding: 12px 14px;
+    vertical-align: middle;
+}
+
+/* Column 1: Subject */
+.att-subject-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.att-table-subj-name {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text-primary, #ffffff);
+    line-height: 1.35;
+    word-break: break-word;
+}
+
+.att-table-subj-code {
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--accent-primary, #00ADB5);
+    background: rgba(0, 173, 181, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: inline-block;
+    width: fit-content;
+}
+
+/* Column 2: Attendance */
+.att-pct-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    align-items: flex-start;
+}
+
+.att-badge {
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 12.5px;
+    font-weight: 700;
+    display: inline-block;
+    width: fit-content;
+}
+
+.att-badge.safe {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.att-badge.warning {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.att-badge.danger {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.att-classes-ratio {
+    font-size: 10.5px;
+    color: var(--text-muted, #94a3b8);
+}
+
+/* Column 3: Margin / Can Miss */
+.att-margin-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    font-family: monospace;
+    width: fit-content;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+}
+
+.att-margin-pill.can-miss {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.att-margin-pill.on-track {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.att-margin-pill.must-attend {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.att-empty-cell {
+    color: var(--text-muted, #64748b);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .att-table-card {
+        padding: 12px 10px;
+    }
+    .att-calculator-card {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 12px 14px;
+        gap: 8px;
+    }
+    .att-threshold-selector {
+        width: 100%;
+        justify-content: space-between;
+    }
+    .att-threshold-btn {
+        flex: 1;
+        padding: 5px 6px;
+        font-size: 11px;
+        text-align: center;
+    }
+    .att-table thead th {
+        padding: 9px 6px;
+        font-size: 10px;
+    }
+    .att-table tbody td {
+        padding: 9px 6px;
+    }
+    .att-table-subj-name {
+        font-size: 12px;
+        line-height: 1.25;
+    }
+    .att-table-subj-code {
+        font-size: 9px;
+        padding: 1px 4px;
+    }
+    .att-badge {
+        font-size: 11px;
+        padding: 2px 5px;
+    }
+    .att-margin-pill {
+        font-size: 10px;
+        padding: 2.5px 5px;
+        min-width: 22px;
+    }
+    .att-col-subject,
+    .att-cell-subject {
+        width: 48%;
+    }
+    .att-col-attendance,
+    .att-cell-attendance {
+        width: 24%;
+    }
+    .att-col-margin,
+    .att-cell-margin {
+        width: 28%;
+    }
+}
