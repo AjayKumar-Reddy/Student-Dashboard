@@ -794,24 +794,28 @@ const parseTimetableHtml = (html: string): any => {
         return classes;
     };
 
-    // 1. Primary Strategy: Contineo wraps each day in a .uk-card container
-    const cardContainers = $('.uk-card, [class*="card"], .uk-panel');
-    let foundCards = false;
+    // 1. Primary Strategy: Check .cn-timetable-list containers and tables with caption
+    const timetableContainers = $('.cn-timetable-list, .uk-card, [class*="card"], .uk-panel');
+    let foundDays = false;
 
-    if (cardContainers.length > 0) {
-        cardContainers.each((_: any, cardEl: any) => {
-            const $card = $(cardEl);
-            const titleEl = $card.find('h1, h2, h3, h4, .uk-card-title, [class*="title"], [class*="header"]').first();
-            const headerText = titleEl.length > 0 ? titleEl.text().trim() : $card.text();
+    if (timetableContainers.length > 0) {
+        timetableContainers.each((_: any, containerEl: any) => {
+            const $container = $(containerEl);
+            const $table = $container.is('table') ? $container : $container.find('table').first();
+            if ($table.length === 0) return;
+            // Skip outer layout tables that contain nested tables
+            if ($table.find('table').length > 0) return;
 
-            const dayMatch = headerText.match(/\b(MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY)\b/i);
+            // Day title can be in caption, headers, or container text
+            const captionText = $table.find('caption').text().trim() ||
+                $container.find('h1, h2, h3, h4, .uk-card-title, [class*="title"], [class*="header"]').first().text().trim() ||
+                $container.clone().children('table').remove().end().text().trim();
+
+            const dayMatch = captionText.match(/\b(MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY)\b/i);
             if (!dayMatch) return;
 
-            const $table = $card.find('table').first();
-            if ($table.length === 0) return;
-
             const dayName = dayMatch[1].toUpperCase();
-            const dateMatch = headerText.match(/(\d{2}-\d{2}-\d{4})/);
+            const dateMatch = captionText.match(/(\d{2}-\d{2}-\d{4})/);
             const dayDate = dateMatch ? dateMatch[1] : "";
 
             if (dayName === "MONDAY" && dayDate && !weekStart) {
@@ -820,7 +824,7 @@ const parseTimetableHtml = (html: string): any => {
 
             const classes = parseTableRows($table);
             if (classes.length > 0) {
-                foundCards = true;
+                foundDays = true;
                 days.push({
                     day: dayName,
                     date: dayDate,
@@ -830,10 +834,13 @@ const parseTimetableHtml = (html: string): any => {
         });
     }
 
-    // 2. Fallback: If no cards found, scan tables directly
-    if (!foundCards) {
+    // 2. Fallback: If no days found yet, scan tables directly
+    if (!foundDays) {
         $('table').each((_: any, table: any) => {
             const $table = $(table);
+            // Skip tables with nested tables
+            if ($table.find('table').length > 0) return;
+
             const headers: string[] = [];
             $table.find('thead th, tr:first-child th, tr:first-child td').each((_: any, th: any) => {
                 headers.push($(th).text().trim().toUpperCase());
@@ -841,33 +848,30 @@ const parseTimetableHtml = (html: string): any => {
 
             if (!headers.some((h: string) => h.includes('TIME') || h.includes('COURSE'))) return;
 
-            // Search preceding elements for day name
+            // Check caption first
             let dayName = "";
             let dayDate = "";
 
-            let prev = $table.prev();
-            while (prev.length && !dayName) {
-                const text = prev.text().trim();
-                const m = text.match(/\b(MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY)\b/i);
-                if (m) {
-                    dayName = m[1].toUpperCase();
-                    const dm = text.match(/(\d{2}-\d{2}-\d{4})/);
-                    if (dm) dayDate = dm[1];
-                }
-                prev = prev.prev();
+            const captionText = $table.find('caption').text().trim();
+            const capMatch = captionText.match(/\b(MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY)\b/i);
+            if (capMatch) {
+                dayName = capMatch[1].toUpperCase();
+                const dm = captionText.match(/(\d{2}-\d{2}-\d{4})/);
+                if (dm) dayDate = dm[1];
             }
 
-            if (!dayName && $table.parent().length) {
-                let parentPrev = $table.parent().prev();
-                while (parentPrev.length && !dayName) {
-                    const text = parentPrev.text().trim();
+            // If caption didn't have it, look at immediate container/preceding text (without traversing into other tables)
+            if (!dayName) {
+                let prev = $table.prev();
+                while (prev.length && !dayName && !prev.is('table') && prev.find('table').length === 0) {
+                    const text = prev.text().trim();
                     const m = text.match(/\b(MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY)\b/i);
                     if (m) {
                         dayName = m[1].toUpperCase();
                         const dm = text.match(/(\d{2}-\d{2}-\d{4})/);
                         if (dm) dayDate = dm[1];
                     }
-                    parentPrev = parentPrev.prev();
+                    prev = prev.prev();
                 }
             }
 
@@ -890,11 +894,23 @@ const parseTimetableHtml = (html: string): any => {
 
     if (days.length === 0) return null;
 
-    // Deduplicate days by day name
+    // Deduplicate days by day name and merge classes
     const uniqueDaysMap = new Map<string, any>();
     for (const d of days) {
         if (!uniqueDaysMap.has(d.day)) {
-            uniqueDaysMap.set(d.day, d);
+            uniqueDaysMap.set(d.day, { ...d, classes: [...d.classes] });
+        } else {
+            const existing = uniqueDaysMap.get(d.day)!;
+            if (!existing.date && d.date) existing.date = d.date;
+            const seenKeys = new Set(existing.classes.map((c: any) => `${c.time_start}-${c.time_end}-${c.course_code}-${c.batch}-${c.room}`));
+            for (const cls of d.classes) {
+                const key = `${cls.time_start}-${cls.time_end}-${cls.course_code}-${cls.batch}-${cls.room}`;
+                if (!seenKeys.has(key)) {
+                    existing.classes.push(cls);
+                    seenKeys.add(key);
+                }
+            }
+            existing.classes.sort((a: any, b: any) => a.time_start.localeCompare(b.time_start));
         }
     }
 

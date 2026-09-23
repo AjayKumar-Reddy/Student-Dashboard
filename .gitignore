@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local student data exports
+student_1ms24is400.json
+*.student.json
+scratch_timetable.html
+scratch_*.html
