@@ -74,22 +74,39 @@ class DataNormalizer {
     }
 
     static calculateTotalMarks(assessments: any[]): number {
+        // If final CIE is explicitly present and valid
+        const finalCie = assessments.find(x => x.type === "FINAL CIE");
+        if (finalCie && this.isValidNumeric(finalCie.obtained_marks) && parseFloat(finalCie.obtained_marks) > 0) {
+            return parseFloat(finalCie.obtained_marks);
+        }
+
         const getVal = (tType: string): number => {
             const a = assessments.find(x => x.type === tType);
-            if (a) {
+            if (a && this.isValidNumeric(a.obtained_marks)) {
                 const val = parseFloat(a.obtained_marks);
-                return !Number.isNaN(val) ? val : 0.0;
+                return (!Number.isNaN(val) && val > 0) ? val : 0;
             }
-            return 0.0;
+            return 0;
         };
 
         const valT1 = getVal("T1");
         const valT2 = getVal("T2");
+        const valT3 = getVal("T3");
         const valAq1 = getVal("AQ1");
         const valAq2 = getVal("AQ2");
 
-        const testAvg = (valT1 > 0 && valT2 > 0) ? Math.round((valT1 + valT2) / 2) : Math.max(valT1, valT2);
-        return testAvg + valAq1 + valAq2;
+        const validTests = [valT1, valT2, valT3].filter(v => v > 0);
+        let testAvg = 0;
+        if (validTests.length === 3) {
+            testAvg = Math.round((valT1 + valT2 + valT3) / 3);
+        } else if (validTests.length === 2) {
+            testAvg = Math.round((validTests[0] + validTests[1]) / 2);
+        } else if (validTests.length === 1) {
+            testAvg = validTests[0]; // If 1 test uploaded, directly take that marks
+        }
+
+        const total = Math.round(testAvg + valAq1 + valAq2);
+        return Math.min(50, total);
     }
 
     static normalizeSubjectEntry(entry: any) {

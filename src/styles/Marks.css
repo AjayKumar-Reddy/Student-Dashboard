@@ -126,11 +126,17 @@
     margin-top: 4px;
 }
 
+.cie-chart-bar-label {
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+    pointer-events: none;
+    fill: var(--text-primary, #F8FAFC);
+}
+
 /* ═══════════════ CIE Accordion List ═══════════════ */
 .cie-accordion-list {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
 }
 
 .cie-accordion-item {
@@ -273,24 +279,25 @@
     max-height: 0;
     opacity: 0;
     overflow: hidden;
-    transition: max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1), 
+    transition: max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1), 
                 opacity 0.25s ease,
                 padding 0.25s ease;
     padding: 0 18px;
     border-top: 0px solid transparent;
 }
 
-/* Desktop: hover to expand */
+/* Desktop: expand on hover or click */
 @media (hover: hover) and (pointer: fine) {
     .cie-accordion-item:hover .cie-accordion-panel,
     .cie-accordion-item.expanded .cie-accordion-panel {
-        max-height: 200px;
+        max-height: 800px;
         opacity: 1;
-        padding: 0 18px 16px 18px;
+        padding: 0 18px 18px 18px;
         border-top: 1px solid rgba(255, 255, 255, 0.06);
     }
 
-    .cie-accordion-item:hover .cie-acc-chevron {
+    .cie-accordion-item:hover .cie-acc-chevron,
+    .cie-accordion-item.expanded .cie-acc-chevron {
         transform: rotate(180deg);
         color: var(--accent-primary, #00ADB5);
     }
@@ -299,87 +306,192 @@
 /* Mobile / touch: expand only on tap (via .expanded class) */
 @media (hover: none), (pointer: coarse) {
     .cie-accordion-item.expanded .cie-accordion-panel {
-        max-height: 200px;
+        max-height: 900px;
         opacity: 1;
-        padding: 0 18px 16px 18px;
+        padding: 0 14px 16px 14px;
         border-top: 1px solid rgba(255, 255, 255, 0.06);
     }
 }
 
-/* ── Inline Assessments Row ── */
-.cie-inline-assessments {
+/* ═══════════════ CIE Expanded Modern Cards ═══════════════ */
+.cie-expanded-inner {
     display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: 16px;
     padding-top: 14px;
 }
 
-.cie-inline-item {
+.cie-group-block {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.cie-group-header {
     display: flex;
     align-items: center;
-    gap: 5px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 8px;
-    padding: 6px 12px;
-    flex: 1;
-    min-width: 90px;
-    transition: background 0.15s ease;
+    gap: 6px;
 }
 
-.cie-inline-item:hover {
-    background: rgba(255, 255, 255, 0.06);
+.cie-group-icon {
+    color: var(--accent-primary, #00ADB5);
 }
 
-.cie-inline-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
-
-.cie-inline-label {
+.cie-group-title {
     font-size: 11px;
-    font-weight: 600;
-    color: var(--text-muted, #94a3b8);
-    margin-right: 2px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary, #cbd5e1);
 }
 
-.cie-inline-score {
-    font-size: 15px;
+.cie-group-subtitle {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-muted, #64748b);
+    margin-left: 2px;
+}
+
+.cie-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    width: 100%;
+}
+
+.cie-score-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.cie-score-card:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(0, 173, 181, 0.3);
+}
+
+.cie-score-card.empty {
+    opacity: 0.6;
+    border-style: dashed;
+}
+
+.cie-sc-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.cie-sc-tag {
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 2.5px 8px;
+    border-radius: 6px;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    color: var(--accent-primary, #00ADB5);
+    background: rgba(0, 173, 181, 0.1);
+    border: 1px solid rgba(0, 173, 181, 0.2);
+}
+
+.cie-sc-pct {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent-primary, #00ADB5);
+}
+
+.cie-sc-status-muted {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-muted, #64748b);
+}
+
+.cie-sc-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.cie-sc-score-row {
+    display: flex;
+    align-items: baseline;
+    gap: 2px;
+}
+
+.cie-sc-score-val {
+    font-size: 20px;
     font-weight: 800;
     color: var(--text-primary, #F8FAFC);
     line-height: 1;
 }
 
-.cie-inline-max {
+.cie-sc-score-max {
     font-size: 11px;
-    font-weight: 500;
-    color: var(--text-muted, #64748b);
+    font-weight: 600;
+    color: var(--text-muted, #94a3b8);
 }
 
-/* Dot colors (reusing existing) */
-.dot-t1 { background: #38bdf8; box-shadow: 0 0 6px rgba(56, 189, 248, 0.6); }
-.dot-t2 { background: #fb923c; box-shadow: 0 0 6px rgba(251, 146, 60, 0.6); }
-.dot-aq1 { background: #34d399; box-shadow: 0 0 6px rgba(52, 211, 153, 0.6); }
-.dot-aq2 { background: #f472b6; box-shadow: 0 0 6px rgba(244, 114, 182, 0.6); }
+.cie-sc-meter {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 99px;
+    overflow: hidden;
+}
+
+.cie-sc-meter-fill {
+    height: 100%;
+    border-radius: 99px;
+    background: var(--accent-primary, #00ADB5);
+    transition: width 0.4s ease;
+}
+
+.cie-sc-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 10.5px;
+    color: var(--text-muted, #94a3b8);
+}
+
+.cie-sc-avg strong {
+    color: var(--text-primary, #ffffff);
+    font-weight: 700;
+}
+
+.cie-sc-subtext {
+    font-size: 10px;
+    color: var(--text-muted, #64748b);
+}
 
 /* ── Panel Footer (Class Avg + View Details) ── */
 .cie-panel-footer {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px dashed rgba(255, 255, 255, 0.06);
+    margin-top: 4px;
+    padding-top: 12px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.08);
+    gap: 12px;
 }
 
 .cie-panel-avg {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 6px;
     font-size: 12px;
-    color: var(--text-muted, #94a3b8);
+    color: var(--text-secondary, #cbd5e1);
+    background: rgba(255, 255, 255, 0.03);
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .cie-panel-avg strong {
@@ -387,23 +499,25 @@
     font-weight: 700;
 }
 
-.cie-panel-action {
+.cie-panel-action-btn {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    background: none;
-    border: none;
-    padding: 4px 0;
+    background: rgba(0, 173, 181, 0.1);
+    border: 1px solid rgba(0, 173, 181, 0.25);
+    padding: 6px 14px;
+    border-radius: 8px;
     font-size: 12px;
     font-weight: 600;
-    color: var(--text-secondary, #cbd5e1);
+    color: var(--accent-primary, #00ADB5);
     cursor: pointer;
-    transition: color 0.2s ease;
-    margin-left: auto;
+    transition: all 0.2s ease;
 }
 
-.cie-panel-action:hover {
-    color: var(--accent-primary, #00ADB5);
+.cie-panel-action-btn:hover {
+    background: rgba(0, 173, 181, 0.2);
+    border-color: rgba(0, 173, 181, 0.4);
+    transform: translateX(2px);
 }
 
 /* SEE (Exam History) Merged View */
@@ -557,24 +671,74 @@
     }
 
     .cie-accordion-panel {
-        padding: 0 14px;
+        padding: 0 12px;
     }
 
     .cie-accordion-item.expanded .cie-accordion-panel {
-        padding: 0 14px 14px 14px;
+        padding: 0 12px 14px 12px;
     }
 
-    .cie-inline-assessments {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
+    .cie-expanded-inner {
+        gap: 12px;
+        padding-top: 10px;
+    }
+
+    .cie-cards-grid {
+        grid-template-columns: repeat(3, 1fr);
         gap: 6px;
     }
 
-    .cie-inline-item {
-        min-width: 0;
-        padding: 6px 10px;
-        justify-content: space-between;
+    .cie-score-card {
+        padding: 8px 6px;
+        gap: 5px;
+        border-radius: 10px;
     }
+
+    .cie-sc-tag {
+        font-size: 8.5px;
+        padding: 2px 4px;
+        letter-spacing: 0;
+    }
+
+    .cie-sc-pct {
+        font-size: 9.5px;
+    }
+
+    .cie-sc-score-val {
+        font-size: 15px;
+    }
+
+    .cie-sc-score-max {
+        font-size: 9.5px;
+    }
+
+    .cie-sc-avg {
+        font-size: 9px;
+    }
+
+    .cie-sc-subtext {
+        font-size: 9px;
+    }
+
+    .cie-panel-footer {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+        padding-top: 10px;
+    }
+
+    .cie-panel-avg {
+        justify-content: center;
+        font-size: 11px;
+        padding: 5px 8px;
+    }
+
+    .cie-panel-action-btn {
+        justify-content: center;
+        font-size: 11.5px;
+        padding: 7px 12px;
+    }
+
     .marks-subtab-bar {
         width: 100%;
         display: flex;

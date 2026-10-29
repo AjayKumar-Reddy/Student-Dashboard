@@ -9,20 +9,22 @@ import {
 import "@/styles/SubjectDetail.css";
 
 /* ── Assessment type maps ── */
-const ASSESSMENT_ICONS: Record<string, string> = { T1: 'T1', T2: 'T2', AQ1: 'Q1', AQ2: 'Q2' };
+const ASSESSMENT_ICONS: Record<string, string> = { T1: 'T1', T2: 'T2', T3: 'T3', AQ1: 'Q1', AQ2: 'Q2', AQ3: 'Q3' };
 const ASSESSMENT_COLORS: Record<string, { bg: string, color: string }> = {
   T1: { bg: 'rgba(173,198,255,0.12)', color: '#adc6ff' },
   T2: { bg: 'rgba(255,182,144,0.12)', color: '#ffb690' },
+  T3: { bg: 'rgba(245,158,11,0.12)', color: '#f59e0b' },
   AQ1: { bg: 'rgba(78,222,163,0.12)', color: '#4edea3' },
   AQ2: { bg: 'rgba(255,180,171,0.12)', color: '#ffb4ab' },
+  AQ3: { bg: 'rgba(20,184,166,0.12)', color: '#14b8a6' },
 };
 const ASSESSMENT_LABELS: Record<string, string> = {
-  T1: 'Test 1', T2: 'Test 2', AQ1: 'Quiz 1', AQ2: 'Quiz 2'
+  T1: 'Test 1', T2: 'Test 2', T3: 'Test 3', AQ1: 'Quiz 1', AQ2: 'Quiz 2', AQ3: 'Quiz 3'
 };
 
 const getMaxMarks = (type: string) => {
-  if (type === 'T1' || type === 'T2') return 30;
-  if (type === 'AQ1' || type === 'AQ2') return 10;
+  if (type === 'T1' || type === 'T2' || type === 'T3') return 30;
+  if (type === 'AQ1' || type === 'AQ2' || type === 'AQ3') return 10;
   return null;
 };
 
@@ -123,7 +125,7 @@ const SubjectDetail: React.FC<SubjectDetailProps> = ({ subject, allSubjects, onS
   /* ── Chart data ── */
   const chartData = useMemo(() => {
     return (subject.assessments || [])
-      .filter((a: any) => ['T1', 'T2', 'AQ1', 'AQ2'].includes(a.type))
+      .filter((a: any) => ['T1', 'T2', 'T3', 'AQ1', 'AQ2', 'AQ3'].includes(a.type))
       .map((a: any) => ({
         type: a.type,
         obtained: parseFloat(a.obtained_marks) || 0,
@@ -138,7 +140,7 @@ const SubjectDetail: React.FC<SubjectDetailProps> = ({ subject, allSubjects, onS
   }, [chartData]);
 
   const tableAssessments = (subject.assessments || [])
-    .filter((a: any) => ['T1', 'T2', 'AQ1', 'AQ2'].includes(a.type));
+    .filter((a: any) => ['T1', 'T2', 'T3', 'AQ1', 'AQ2', 'AQ3'].includes(a.type));
 
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'];

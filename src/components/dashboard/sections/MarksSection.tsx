@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import {
     Tooltip, ResponsiveContainer,
-    BarChart, Bar, XAxis, YAxis, CartesianGrid
+    BarChart, Bar, XAxis, YAxis, CartesianGrid, LabelList
 } from "recharts";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import "@/styles/Marks.css";
@@ -15,8 +15,10 @@ import "@/styles/Marks.css";
 const MarksTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
         const data = payload[0].payload;
+        const marks = typeof data.marks === 'number' ? data.marks : 0;
+        const pct = Math.round((marks / 50) * 100);
         return (
-            <div className="custom-chart-tooltip" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}>
+            <div className="custom-chart-tooltip" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', minWidth: '190px' }}>
                 <p className="tooltip-title">{data.name}</p>
                 <div className="tooltip-divider"></div>
                 <div className="tooltip-row">
@@ -25,13 +27,88 @@ const MarksTooltip = ({ active, payload }: any) => {
                 </div>
                 <div className="tooltip-row">
                     <span className="tooltip-label">Internal Marks</span>
-                    <span className="tooltip-value" style={{ color: 'var(--accent-primary)' }}>{data.marks} / 50</span>
+                    <span className="tooltip-value" style={{ color: 'var(--accent-primary)', fontWeight: 700 }}>{marks} / 50</span>
+                </div>
+                <div className="tooltip-row">
+                    <span className="tooltip-label">Percentage</span>
+                    <span className="tooltip-value" style={{ 
+                        color: pct >= 80 ? '#10b981' : pct >= 60 ? 'var(--accent-primary, #00ADB5)' : '#f59e0b', 
+                        fontWeight: 700 
+                    }}>
+                        {pct}%
+                    </span>
                 </div>
             </div>
         );
     }
     return null;
 };
+
+const CIEBarChart = React.memo(({ 
+    data, 
+    onSelectSubject 
+}: { 
+    data: any[]; 
+    onSelectSubject?: (subj: any) => void 
+}) => {
+    return (
+        <ResponsiveContainer width="100%" height={380}>
+            <BarChart data={data} margin={{ top: 28, right: 10, left: -15, bottom: 25 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" vertical={false} />
+                <XAxis 
+                    dataKey="code" 
+                    stroke="var(--text-muted)" 
+                    style={{ fontSize: '11px', fontWeight: 600 }} 
+                    axisLine={false} 
+                    tickLine={false} 
+                />
+                <YAxis 
+                    domain={[0, 55]} 
+                    ticks={[0, 10, 20, 30, 40, 50]} 
+                    stroke="var(--text-muted)" 
+                    style={{ fontSize: '12px' }} 
+                    axisLine={false} 
+                    tickLine={false} 
+                />
+                <Tooltip content={<MarksTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+                <Bar 
+                    dataKey="marks" 
+                    radius={[6, 6, 0, 0]} 
+                    barSize={24} 
+                    fill="var(--accent-primary, #00ADB5)"
+                    isAnimationActive={false}
+                    onClick={(entry: any) => entry && onSelectSubject?.(entry.payload)}
+                    style={{ cursor: 'pointer' }}
+                >
+                    <LabelList 
+                        dataKey="marks" 
+                        position="top" 
+                        content={(props: any) => {
+                            const { x, y, width, value } = props;
+                            if (typeof value !== 'number' || isNaN(value)) return null;
+                            return (
+                                <g>
+                                    <text 
+                                        x={Number(x) + Number(width) / 2} 
+                                        y={Number(y) - 8} 
+                                        fill="var(--text-primary, #F8FAFC)" 
+                                        textAnchor="middle" 
+                                        fontSize="11" 
+                                        fontWeight="700"
+                                        className="cie-chart-bar-label"
+                                    >
+                                        {value}
+                                    </text>
+                                </g>
+                            );
+                        }} 
+                    />
+                </Bar>
+            </BarChart>
+        </ResponsiveContainer>
+    );
+});
+CIEBarChart.displayName = "CIEBarChart";
 
 interface MarksSectionProps {
     studentName?: string;
@@ -69,7 +146,47 @@ const MarksSection: React.FC<MarksSectionProps> = ({
     // Reversed history (most recent first)
     const reversedHistory = useMemo(() => [...examHistory].reverse(), [examHistory]);
 
-    const hasMarksData = currentSem.length > 0 && currentSem.some((s: any) => 
+    // Compute dynamic CIE chart data based on uploaded assessments
+    const cieChartData = useMemo(() => {
+        return currentSem.map((subj) => {
+            const getScore = (type: string) => subj.assessments?.find((a: any) => a.type === type);
+            const t1 = getScore('T1');
+            const t2 = getScore('T2');
+            const t3 = getScore('T3');
+            const aq1 = getScore('AQ1');
+            const aq2 = getScore('AQ2');
+
+            const valT1 = (t1 && typeof t1.obtained_marks === 'number' && t1.obtained_marks > 0) ? t1.obtained_marks : 0;
+            const valT2 = (t2 && typeof t2.obtained_marks === 'number' && t2.obtained_marks > 0) ? t2.obtained_marks : 0;
+            const valT3 = (t3 && typeof t3.obtained_marks === 'number' && t3.obtained_marks > 0) ? t3.obtained_marks : 0;
+            const valAq1 = (aq1 && typeof aq1.obtained_marks === 'number' && aq1.obtained_marks > 0) ? aq1.obtained_marks : 0;
+            const valAq2 = (aq2 && typeof aq2.obtained_marks === 'number' && aq2.obtained_marks > 0) ? aq2.obtained_marks : 0;
+
+            const validTests = [valT1, valT2, valT3].filter(v => v > 0);
+            let marks = 0;
+
+            if (validTests.length > 0) {
+                let testAvg = 0;
+                if (validTests.length === 3) {
+                    testAvg = Math.round((valT1 + valT2 + valT3) / 3);
+                } else if (validTests.length === 2) {
+                    testAvg = Math.round((validTests[0] + validTests[1]) / 2);
+                } else {
+                    testAvg = validTests[0]; // If only 1 test uploaded, directly take that marks
+                }
+                marks = Math.min(50, Math.round(testAvg + valAq1 + valAq2));
+            } else if (typeof subj.marks === 'number' && subj.marks > 0) {
+                marks = Math.round(subj.marks);
+            }
+
+            return {
+                ...subj,
+                marks
+            };
+        });
+    }, [currentSem]);
+
+    const hasMarksData = cieChartData.length > 0 && cieChartData.some((s: any) => 
         (s.marks && s.marks > 0) || 
         (s.assessments && s.assessments.length > 0)
     );
@@ -116,22 +233,7 @@ const MarksSection: React.FC<MarksSectionProps> = ({
                             </div>
                             <div className="chart-body marks-chart-body">
                                 {hasMarksData ? (
-                                    <ResponsiveContainer width="100%" height={380}>
-                                        <BarChart data={currentSem} margin={{ top: 20, right: 0, left: -20, bottom: 20 }}>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.15)" vertical={false} />
-                                            <XAxis dataKey="code" stroke="var(--text-muted)" style={{ fontSize: '11px' }} axisLine={false} tickLine={false} />
-                                            <YAxis domain={[0, 50]} ticks={[0, 10, 20, 30, 40, 50]} stroke="var(--text-muted)" style={{ fontSize: '12px' }} axisLine={false} tickLine={false} />
-                                            <Tooltip content={<MarksTooltip />} cursor={{ fill: 'var(--bg-primary)' }} />
-                                            <Bar 
-                                                dataKey="marks" 
-                                                radius={[4, 4, 0, 0]} 
-                                                barSize={20} 
-                                                fill="var(--accent-primary)" 
-                                                onClick={(data: any) => data && onSelectSubject?.(data.payload)}
-                                                style={{ cursor: 'pointer' }}
-                                            />
-                                        </BarChart>
-                                    </ResponsiveContainer>
+                                    <CIEBarChart data={cieChartData} onSelectSubject={onSelectSubject} />
                                 ) : (
                                     <div className="dashboard-empty-state">
                                         <div className="empty-state-icon-wrap purple">
@@ -159,15 +261,72 @@ const MarksSection: React.FC<MarksSectionProps> = ({
                                     const getScore = (type: string) => subj.assessments?.find((a: any) => a.type === type);
                                     const t1 = getScore('T1');
                                     const t2 = getScore('T2');
+                                    const t3 = getScore('T3');
                                     const aq1 = getScore('AQ1');
                                     const aq2 = getScore('AQ2');
-                                    const hasAverage = (t1?.class_average && t1.class_average > 0) || (t2?.class_average && t2.class_average > 0);
-                                    const classAvg = hasAverage 
-                                        ? Math.round(((t1?.class_average || 0) + (t2?.class_average || 0)) / (t1?.class_average && t2?.class_average ? 2 : 1)) 
-                                        : null;
-                                    const pct = typeof subj.marks === 'number' ? Math.min(100, Math.max(0, (subj.marks / 50) * 100)) : 0;
-                                    const barColor = subj.marks >= 40 ? '#10b981' : subj.marks >= 25 ? 'var(--accent-primary, #00ADB5)' : '#f59e0b';
+                                    const aq3 = getScore('AQ3');
+
+                                    // 1. Calculate Normal Total Marks (Student's CIE score out of 50):
+                                    const valT1 = (t1 && typeof t1.obtained_marks === 'number' && t1.obtained_marks > 0) ? t1.obtained_marks : 0;
+                                    const valT2 = (t2 && typeof t2.obtained_marks === 'number' && t2.obtained_marks > 0) ? t2.obtained_marks : 0;
+                                    const valT3 = (t3 && typeof t3.obtained_marks === 'number' && t3.obtained_marks > 0) ? t3.obtained_marks : 0;
+                                    const valAq1 = (aq1 && typeof aq1.obtained_marks === 'number' && aq1.obtained_marks > 0) ? aq1.obtained_marks : 0;
+                                    const valAq2 = (aq2 && typeof aq2.obtained_marks === 'number' && aq2.obtained_marks > 0) ? aq2.obtained_marks : 0;
+
+                                    const validTests = [valT1, valT2, valT3].filter(v => v > 0);
+                                    let normalMarks: number | null = null;
+
+                                    if (validTests.length > 0) {
+                                        let testAvg = 0;
+                                        if (validTests.length === 3) {
+                                            testAvg = Math.round((valT1 + valT2 + valT3) / 3);
+                                        } else if (validTests.length === 2) {
+                                            testAvg = Math.round((validTests[0] + validTests[1]) / 2);
+                                        } else {
+                                            testAvg = validTests[0]; // If 1 test uploaded, directly take that marks
+                                        }
+                                        normalMarks = Math.min(50, Math.round(testAvg + valAq1 + valAq2));
+                                    } else if (typeof subj.marks === 'number' && subj.marks > 0) {
+                                        normalMarks = Math.round(subj.marks);
+                                    }
+
+                                    // 2. Calculate Total Class Average (out of 50):
+                                    const valT1Class = (t1 && typeof t1.class_average === 'number' && t1.class_average > 0) ? t1.class_average : 0;
+                                    const valT2Class = (t2 && typeof t2.class_average === 'number' && t2.class_average > 0) ? t2.class_average : 0;
+                                    const valT3Class = (t3 && typeof t3.class_average === 'number' && t3.class_average > 0) ? t3.class_average : 0;
+                                    const valAq1Class = (aq1 && typeof aq1.class_average === 'number' && aq1.class_average > 0) ? aq1.class_average : 0;
+                                    const valAq2Class = (aq2 && typeof aq2.class_average === 'number' && aq2.class_average > 0) ? aq2.class_average : 0;
+
+                                    const validClassAvgs = [valT1Class, valT2Class, valT3Class].filter(v => v > 0);
+                                    let totalClassAvg: number | null = null;
+
+                                    if (validClassAvgs.length > 0) {
+                                        let testClassComponent = 0;
+                                        if (validClassAvgs.length === 3) {
+                                            testClassComponent = Math.round((validClassAvgs[0] + validClassAvgs[1] + validClassAvgs[2]) / 3);
+                                        } else if (validClassAvgs.length === 2) {
+                                            testClassComponent = Math.round((validClassAvgs[0] + validClassAvgs[1]) / 2);
+                                        } else {
+                                            testClassComponent = Math.round(validClassAvgs[0]);
+                                        }
+                                        totalClassAvg = Math.min(50, Math.round(testClassComponent + valAq1Class + valAq2Class));
+                                    }
+
+                                    const displayMarks = normalMarks !== null ? normalMarks : '—';
+                                    const pct = typeof displayMarks === 'number' ? Math.min(100, Math.max(0, (displayMarks / 50) * 100)) : 0;
                                     const isExpanded = expandedSubject === subj.code;
+
+                                    const internalTests = [
+                                        { id: 'T1', title: 'Test 1', data: t1, max: t1?.max_marks || 30 },
+                                        { id: 'T2', title: 'Test 2', data: t2, max: t2?.max_marks || 30 },
+                                        { id: 'T3', title: 'Test 3', data: t3, max: t3?.max_marks || 30 },
+                                    ];
+
+                                    const internalAqs = [
+                                        { id: 'AQ1', title: 'A/Q 1', data: aq1, max: aq1?.max_marks || 10 },
+                                        { id: 'AQ2', title: 'A/Q 2', data: aq2, max: aq2?.max_marks || 10 },
+                                        { id: 'AQ3', title: 'A/Q 3', data: aq3, max: aq3?.max_marks || 10 },
+                                    ];
 
                                     return (
                                         <div
@@ -183,12 +342,12 @@ const MarksSection: React.FC<MarksSectionProps> = ({
                                                     <span className="cie-acc-code">{subj.code}</span>
                                                     <div className="cie-acc-name-wrap">
                                                         <span className="cie-acc-name">{subj.name}</span>
-                                                        {typeof subj.marks === 'number' && (
+                                                        {displayMarks !== '—' && (
                                                             <div className="cie-acc-progress-row">
                                                                 <div className="cie-acc-progress-track">
                                                                     <div 
                                                                         className="cie-acc-progress-fill" 
-                                                                        style={{ width: `${pct}%`, backgroundColor: barColor }} 
+                                                                        style={{ width: `${pct}%`, backgroundColor: 'var(--accent-primary, #00ADB5)' }} 
                                                                     />
                                                                 </div>
                                                                 <span className="cie-acc-pct">{Math.round(pct)}%</span>
@@ -199,7 +358,7 @@ const MarksSection: React.FC<MarksSectionProps> = ({
                                                 <div className="cie-acc-right">
                                                     <div className="cie-acc-marks">
                                                         <span className="cie-acc-marks-val">
-                                                            {typeof subj.marks === 'number' ? subj.marks : '—'}
+                                                            {displayMarks}
                                                         </span>
                                                         <span className="cie-acc-marks-max">/50</span>
                                                     </div>
@@ -207,51 +366,124 @@ const MarksSection: React.FC<MarksSectionProps> = ({
                                                 </div>
                                             </div>
 
-                                            {/* Expanded Panel — revealed on hover (desktop) / tap (mobile) */}
+                                            {/* Expanded Panel — revealed on click / hover */}
                                             <div className="cie-accordion-panel">
-                                                <div className="cie-inline-assessments">
-                                                    <div className="cie-inline-item">
-                                                        <span className="cie-inline-dot dot-t1" />
-                                                        <span className="cie-inline-label">T1</span>
-                                                        <span className="cie-inline-score">{t1?.obtained_marks ?? '—'}</span>
-                                                        <span className="cie-inline-max">/{t1?.max_marks || 30}</span>
-                                                    </div>
-                                                    <div className="cie-inline-item">
-                                                        <span className="cie-inline-dot dot-t2" />
-                                                        <span className="cie-inline-label">T2</span>
-                                                        <span className="cie-inline-score">{t2?.obtained_marks ?? '—'}</span>
-                                                        <span className="cie-inline-max">/{t2?.max_marks || 30}</span>
-                                                    </div>
-                                                    <div className="cie-inline-item">
-                                                        <span className="cie-inline-dot dot-aq1" />
-                                                        <span className="cie-inline-label">AQ1</span>
-                                                        <span className="cie-inline-score">{aq1?.obtained_marks ?? '—'}</span>
-                                                        <span className="cie-inline-max">/{aq1?.max_marks || 10}</span>
-                                                    </div>
-                                                    <div className="cie-inline-item">
-                                                        <span className="cie-inline-dot dot-aq2" />
-                                                        <span className="cie-inline-label">AQ2</span>
-                                                        <span className="cie-inline-score">{aq2?.obtained_marks ?? '—'}</span>
-                                                        <span className="cie-inline-max">/{aq2?.max_marks || 10}</span>
-                                                    </div>
-                                                </div>
-
-                                                <div className="cie-panel-footer">
-                                                    {classAvg !== null && (
-                                                        <div className="cie-panel-avg">
-                                                            <Sparkles size={12} />
-                                                            <span>Class Avg: <strong>{classAvg}/30</strong></span>
+                                                <div className="cie-expanded-inner">
+                                                    {/* Section 1: 3 Internal Tests */}
+                                                    <div className="cie-group-block">
+                                                        <div className="cie-group-header">
+                                                            <FileText size={13} className="cie-group-icon" />
+                                                            <span className="cie-group-title">Internal Tests (3 CIEs)</span>
+                                                            <span className="cie-group-subtitle">Out of 30</span>
                                                         </div>
-                                                    )}
-                                                    <button
-                                                        type="button"
-                                                        className="cie-panel-action"
-                                                        onClick={(e) => { e.stopPropagation(); onSelectSubject?.(subj); }}
-                                                    >
-                                                        <BarChart2 size={12} />
-                                                        <span>View Details</span>
-                                                        <ChevronRight size={12} />
-                                                    </button>
+                                                        <div className="cie-cards-grid cie-tests-grid">
+                                                            {internalTests.map((test) => {
+                                                                const hasScore = test.data && typeof test.data.obtained_marks === 'number' && test.data.obtained_marks > 0;
+                                                                const score = hasScore ? test.data.obtained_marks : null;
+                                                                const testPct = hasScore ? Math.round((score! / test.max) * 100) : 0;
+                                                                const hasAvg = test.data?.class_average && test.data.class_average > 0;
+                                                                return (
+                                                                    <div key={test.id} className={`cie-score-card ${hasScore ? 'has-data' : 'empty'}`}>
+                                                                        <div className="cie-sc-top">
+                                                                            <span className="cie-sc-tag">
+                                                                                {test.title}
+                                                                            </span>
+                                                                            {hasScore ? (
+                                                                                <span className="cie-sc-pct">
+                                                                                    {testPct}%
+                                                                                </span>
+                                                                            ) : (
+                                                                                <span className="cie-sc-status-muted">Upcoming</span>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="cie-sc-body">
+                                                                            <div className="cie-sc-score-row">
+                                                                                <span className="cie-sc-score-val">{hasScore ? score : '—'}</span>
+                                                                                <span className="cie-sc-score-max">/{test.max}</span>
+                                                                            </div>
+                                                                            <div className="cie-sc-meter">
+                                                                                <div 
+                                                                                    className="cie-sc-meter-fill" 
+                                                                                    style={{ width: `${hasScore ? Math.min(100, testPct) : 0}%` }} 
+                                                                                />
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="cie-sc-footer">
+                                                                            {hasAvg ? (
+                                                                                <span className="cie-sc-avg">Avg: <strong>{test.data.class_average}</strong></span>
+                                                                            ) : (
+                                                                                <span className="cie-sc-subtext">{hasScore ? 'Evaluated' : 'Not recorded'}</span>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Section 2: Quizzes & Activities (A/Q 1, 2, 3) */}
+                                                    <div className="cie-group-block">
+                                                        <div className="cie-group-header">
+                                                            <Sparkles size={13} className="cie-group-icon" />
+                                                            <span className="cie-group-title">Activities & Quizzes</span>
+                                                            <span className="cie-group-subtitle">Out of 10</span>
+                                                        </div>
+                                                        <div className="cie-cards-grid cie-aqs-grid">
+                                                            {internalAqs.map((aq) => {
+                                                                const hasScore = aq.data && typeof aq.data.obtained_marks === 'number' && aq.data.obtained_marks > 0;
+                                                                const score = hasScore ? aq.data.obtained_marks : null;
+                                                                const aqPct = hasScore ? Math.round((score! / aq.max) * 100) : 0;
+                                                                return (
+                                                                    <div key={aq.id} className={`cie-score-card ${hasScore ? 'has-data' : 'empty'}`}>
+                                                                        <div className="cie-sc-top">
+                                                                            <span className="cie-sc-tag">
+                                                                                {aq.title}
+                                                                            </span>
+                                                                            {hasScore ? (
+                                                                                <span className="cie-sc-pct">
+                                                                                    {aqPct}%
+                                                                                </span>
+                                                                            ) : (
+                                                                                <span className="cie-sc-status-muted">Upcoming</span>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="cie-sc-body">
+                                                                            <div className="cie-sc-score-row">
+                                                                                <span className="cie-sc-score-val">{hasScore ? score : '—'}</span>
+                                                                                <span className="cie-sc-score-max">/{aq.max}</span>
+                                                                            </div>
+                                                                            <div className="cie-sc-meter">
+                                                                                <div 
+                                                                                    className="cie-sc-meter-fill" 
+                                                                                    style={{ width: `${hasScore ? Math.min(100, aqPct) : 0}%` }} 
+                                                                                />
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="cie-sc-footer">
+                                                                            <span className="cie-sc-subtext">{hasScore ? 'Recorded' : 'Pending'}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Bottom Panel Actions & Total Class Average */}
+                                                    <div className="cie-panel-footer">
+                                                        <div className="cie-panel-avg">
+                                                            <Sparkles size={13} />
+                                                            <span>Total Class Avg: <strong>{totalClassAvg !== null ? `${totalClassAvg}/50` : '—/50'}</strong></span>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            className="cie-panel-action-btn"
+                                                            onClick={(e) => { e.stopPropagation(); onSelectSubject?.(subj); }}
+                                                        >
+                                                            <BarChart2 size={13} />
+                                                            <span>Full Subject Analytics</span>
+                                                            <ChevronRight size={13} />
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
