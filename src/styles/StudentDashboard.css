@@ -857,6 +857,11 @@
 }
 
 /* Custom Tooltip Styling */
+.recharts-tooltip-wrapper {
+    z-index: 9999 !important;
+    pointer-events: none !important;
+}
+
 .custom-chart-tooltip {
     background: rgba(30, 41, 59, 0.95);
     border: 1px solid var(--border-subtle);
@@ -1332,17 +1337,17 @@
     }
 
     .chart-legend-custom {
-        flex-direction: row;
-        flex-wrap: wrap;
-        justify-content: center;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
         width: 100%;
         padding-bottom: 8px;
-        gap: 8px;
+        gap: 6px;
     }
 
     .legend-item-custom {
         font-size: 11px;
         gap: 6px;
+        padding: 5px 8px;
     }
 
     .legend-label-custom {
@@ -1603,19 +1608,19 @@
 
 .update-dashboard-btn {
     position: relative;
-    padding: 10px 20px;
+    padding: 7px 14px;
     background: linear-gradient(135deg, rgba(0, 173, 181, 0.16) 0%, rgba(2, 132, 199, 0.10) 100%);
     border: 1px solid rgba(0, 173, 181, 0.35);
     border-radius: 10px;
     color: var(--text-primary);
-    font-size: 14px;
-    font-weight: 600;
     cursor: pointer;
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 10px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 4px 16px rgba(0, 173, 181, 0.12), inset 0 1px 1px rgba(255, 255, 255, 0.15);
+    justify-content: center;
+    gap: 8px;
+    flex-shrink: 0;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 14px rgba(0, 173, 181, 0.12), inset 0 1px 1px rgba(255, 255, 255, 0.15);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     overflow: hidden;
@@ -1624,8 +1629,8 @@
 .update-dashboard-btn:hover:not(:disabled) {
     background: linear-gradient(135deg, rgba(0, 173, 181, 0.26) 0%, rgba(2, 132, 199, 0.18) 100%);
     border-color: rgba(0, 173, 181, 0.6);
-    box-shadow: 0 8px 24px rgba(0, 173, 181, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.25);
-    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 173, 181, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.25);
+    transform: translateY(-1px);
 }
 
 .update-dashboard-btn:disabled {
@@ -1634,18 +1639,53 @@
 }
 
 .update-dashboard-btn.cooldown {
-    background: rgba(100, 116, 139, 0.05);
+    background: rgba(100, 116, 139, 0.08);
+    border-color: rgba(100, 116, 139, 0.25);
     color: var(--text-muted);
 }
 
 .btn-content {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
 }
 
 .btn-icon {
     flex-shrink: 0;
+    color: var(--accent-primary, #00ADB5);
+    transition: color 0.2s ease;
+}
+
+.update-dashboard-btn.cooldown .btn-icon {
+    color: var(--text-muted, #94A3B8);
+}
+
+.btn-text-col {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    line-height: 1.15;
+    text-align: left;
+}
+
+.btn-text-top {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: -0.1px;
+    color: var(--text-primary, #F8FAFC);
+    white-space: nowrap;
+}
+
+.btn-text-bottom {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    color: var(--accent-primary, #00ADB5);
+    white-space: nowrap;
+}
+
+.update-dashboard-btn.cooldown .btn-text-bottom {
+    color: var(--text-muted, #94A3B8);
 }
 
 /* Glow CTA Animation */
@@ -2223,22 +2263,27 @@
         align-items: center;
         justify-content: center;
         width: auto !important;
-        padding: 8px 18px;
-        font-size: 13px;
-        font-weight: 600;
-        border-radius: 9999px;
-        background: rgba(0, 173, 181, 0.12);
+        flex-shrink: 0 !important;
+        padding: 6px 11px;
+        border-radius: 9px;
+        background: rgba(0, 173, 181, 0.14);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
         border: 1px solid rgba(0, 173, 181, 0.35);
-        box-shadow: 0 4px 14px rgba(0, 173, 181, 0.2);
+        box-shadow: 0 2px 10px rgba(0, 173, 181, 0.15);
         color: var(--text-primary);
-        gap: 8px;
+        gap: 7px;
     }
     .update-dashboard-btn:hover:not(:disabled) {
         border-color: rgba(0, 173, 181, 0.8);
         background: rgba(0, 173, 181, 0.2);
         transform: translateY(-1px);
+    }
+    .update-dashboard-btn .btn-text-top {
+        font-size: 11px;
+    }
+    .update-dashboard-btn .btn-text-bottom {
+        font-size: 9.5px;
     }
 
     .header-actions {

@@ -339,11 +339,15 @@
 /* Class Content Card */
 .tt-class-content {
     flex: 1;
-    padding: 14px 18px;
+    padding: 13px 18px;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.06));
     border-radius: 14px;
     margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
     transition: all 0.25s ease;
 }
 
@@ -363,21 +367,88 @@
     background: rgba(245, 158, 11, 0.04);
 }
 
-/* Time Row */
-.tt-class-time-row {
+/* Left Column */
+.tt-period-left {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 8px;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
 }
 
-.tt-class-time {
+/* Title Row */
+.tt-class-title-row {
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-size: 0.75rem;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.tt-course-name {
+    font-size: 0.92rem;
     font-weight: 600;
-    color: var(--text-secondary, #94A3B8);
+    color: var(--text-primary, #F8FAFC);
+    line-height: 1.3;
+}
+
+.tt-course-code {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 2px 7px;
+    border-radius: 6px;
+    background: rgba(0, 173, 181, 0.1);
+    color: var(--accent-primary, #00ADB5);
+    border: 1px solid rgba(0, 173, 181, 0.15);
+    white-space: nowrap;
+}
+
+/* Right Column: Status on top, Time below */
+.tt-period-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 5px;
+    flex-shrink: 0;
+    text-align: right;
+    min-width: 95px;
+}
+
+.tt-period-time-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    padding: 0;
+    min-width: auto;
+    text-align: right;
+}
+
+.tt-time-start-hl {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--accent-primary, #00ADB5);
+    line-height: 1.2;
+}
+
+.tt-time-to-sub {
+    font-size: 8.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted, #94a3b8);
+    line-height: 1.1;
+    margin: 1px 0;
+}
+
+.tt-time-end-hl {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text-primary, #F8FAFC);
+    line-height: 1.2;
 }
 
 .tt-next-badge {
@@ -425,32 +496,15 @@
     border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
-/* Title Row */
-.tt-class-title-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 8px;
-    flex-wrap: wrap;
-}
-
-.tt-course-code {
-    font-size: 0.7rem;
+.tt-upcoming-badge {
+    font-size: 0.6rem;
     font-weight: 700;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.08em;
     padding: 3px 8px;
     border-radius: 6px;
-    background: rgba(0, 173, 181, 0.1);
-    color: var(--accent-primary, #00ADB5);
-    border: 1px solid rgba(0, 173, 181, 0.15);
-    white-space: nowrap;
-}
-
-.tt-course-name {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--text-primary, #F8FAFC);
-    line-height: 1.3;
+    background: rgba(245, 158, 11, 0.08);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.2);
 }
 
 /* Meta Row */

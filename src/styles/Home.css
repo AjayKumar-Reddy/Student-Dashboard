@@ -34,15 +34,16 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 14px;
-    flex-wrap: wrap;
+    gap: 12px;
+    flex-wrap: nowrap;
 }
 
 .home-profile-identity {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
     min-width: 0;
+    flex: 1 1 auto;
 }
 
 /* Initials Avatar */
@@ -562,17 +563,17 @@
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 11px;
-    padding: 14px 18px;
+    padding: 13px 16px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 20px;
+    gap: 16px;
     transition: border-color 0.2s ease, background 0.2s ease;
 }
 
 .home-tt-period-row:hover {
-    background: rgba(255, 255, 255, 0.03);
-    border-color: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.035);
+    border-color: rgba(255, 255, 255, 0.12);
 }
 
 .home-tt-period-row.ongoing-period {
@@ -612,7 +613,7 @@
     gap: 10px;
     flex-wrap: wrap;
     align-items: center;
-    margin-top: 3px;
+    margin-top: 4px;
 }
 
 .home-meta-item {
@@ -631,36 +632,39 @@
     color: #cbd5e1;
 }
 
-/* Column 2: Time Badge (Middle) */
-.home-tt-period-middle {
+/* Column 2: Status on top, Time below (Right Side) */
+.home-tt-period-right {
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    align-items: flex-end;
     justify-content: center;
+    gap: 5px;
     flex-shrink: 0;
-    min-width: 130px;
-    text-align: center;
+    text-align: right;
+    min-width: 95px;
 }
 
 .home-period-time-badge {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-end;
     justify-content: center;
     background: transparent;
     border: none;
     padding: 0;
     min-width: auto;
+    text-align: right;
 }
 
 .home-time-start-hl {
-    font-size: 13px;
+    font-size: 12.5px;
     font-weight: 700;
     color: var(--accent-primary, #00ADB5);
     line-height: 1.2;
 }
 
 .home-time-to-sub {
-    font-size: 9px;
+    font-size: 8.5px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -670,35 +674,16 @@
 }
 
 .home-time-end-hl {
-    font-size: 12px;
+    font-size: 11.5px;
     font-weight: 600;
     color: var(--text-primary, #F8FAFC);
     line-height: 1.2;
 }
 
-/* Column 3: Room + Status */
-.home-tt-period-right {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 10px;
-    flex-shrink: 0;
-    text-align: right;
-    min-width: 110px;
-}
-
-.home-tt-room-end {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text-secondary, #cbd5e1);
-    background: rgba(255, 255, 255, 0.035);
-    border: 1px solid rgba(255, 255, 255, 0.07);
-    padding: 5px 10px;
-    border-radius: 7px;
-    white-space: nowrap;
+.home-class-status-pill.completed {
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    color: #10b981;
 }
 
 /* ───────────────── 4. Mobile Responsiveness ───────────────── */
@@ -710,6 +695,11 @@
     /* Profile Card Mobile */
     .home-profile-card {
         padding: 18px 16px;
+    }
+
+    .home-profile-top {
+        gap: 10px;
+        flex-wrap: nowrap;
     }
 
     .home-avatar {
@@ -785,43 +775,41 @@
         font-size: 13.5px;
     }
 
-    /* Timetable row on mobile: grid layout with time at right end (from on top, to below) */
+    /* Timetable row on mobile */
     .home-tt-period-row {
-        display: grid;
-        grid-template-columns: 1fr auto;
-        gap: 8px 12px;
-        align-items: start;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
         padding: 12px 14px;
     }
 
     .home-tt-period-left {
-        grid-column: 1;
-        grid-row: 1;
-        width: 100%;
+        flex: 1;
         min-width: 0;
     }
 
-    .home-tt-period-middle {
-        grid-column: 2;
-        grid-row: 1;
-        width: auto;
-        min-width: 0;
+    .home-tt-period-right {
         display: flex;
-        justify-content: flex-end;
-        align-self: center;
+        flex-direction: column;
+        align-items: flex-end;
+        justify-content: center;
+        gap: 4px;
+        flex-shrink: 0;
+        min-width: auto;
     }
 
     .home-period-time-badge {
         display: flex;
         flex-direction: column;
-        align-items: center;
+        align-items: flex-end;
         justify-content: center;
         gap: 1px;
         padding: 0;
         min-width: auto;
         background: transparent;
         border: none;
-        text-align: center;
+        text-align: right;
     }
 
     .home-time-start-hl {
@@ -846,30 +834,6 @@
         font-weight: 600;
         color: var(--text-primary, #F8FAFC);
         line-height: 1.2;
-    }
-
-    .home-tt-period-right {
-        grid-column: 1 / -1;
-        grid-row: 2;
-        width: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding-top: 8px;
-        border-top: 1px dashed rgba(255, 255, 255, 0.05);
-        min-width: 0;
-    }
-
-    .home-tt-period-right:empty {
-        display: none;
-        padding-top: 0;
-        border-top: none;
-    }
-
-    .home-tt-period-right .home-tt-room-end {
-        margin-left: auto;
-        font-size: 11px;
-        padding: 3px 8px;
     }
 }
 

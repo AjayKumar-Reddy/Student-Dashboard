@@ -270,49 +270,53 @@ const TimetableSection: React.FC<TimetableSectionProps> = ({ studentName, timeta
 
                                 {/* Class Content */}
                                 <div className="tt-class-content">
-                                    <div className="tt-class-time-row">
-                                        <span className="tt-class-time">
-                                            <Clock size={13} />
-                                            {formatTime12h(cls.time_start)} – {formatTime12h(cls.time_end)}
-                                        </span>
-                                        {isNextClass && (
-                                            <span className="tt-next-badge">
-                                                <ChevronRight size={12} /> NEXT
-                                            </span>
-                                        )}
-                                        {status === "in-progress" && (
+                                    <div className="tt-period-left">
+                                        <div className="tt-class-title-row">
+                                            <span className="tt-course-name">{cls.course_name}</span>
+                                            {cls.course_code && (
+                                                <span className="tt-course-code">{cls.course_code}</span>
+                                            )}
+                                        </div>
+
+                                        <div className="tt-class-meta">
+                                            {cls.room && (
+                                                <span className="tt-meta-item">
+                                                    <MapPin size={12} /> {cls.room}
+                                                </span>
+                                            )}
+                                            {cls.faculty && (
+                                                <span className="tt-meta-item">
+                                                    <User size={12} /> {cls.faculty}
+                                                </span>
+                                            )}
+                                            {cls.batch && (
+                                                <span className="tt-meta-item batch">
+                                                    <AlertCircle size={12} /> {cls.batch}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="tt-period-right">
+                                        {status === "in-progress" ? (
                                             <span className="tt-live-badge">
-                                                <Zap size={12} /> LIVE
+                                                <Zap size={11} /> LIVE
                                             </span>
-                                        )}
-                                        {status === "completed" && (
+                                        ) : isNextClass ? (
+                                            <span className="tt-next-badge">
+                                                <ChevronRight size={11} /> NEXT
+                                            </span>
+                                        ) : status === "completed" ? (
                                             <span className="tt-done-badge">DONE</span>
+                                        ) : (
+                                            <span className="tt-upcoming-badge">UPCOMING</span>
                                         )}
-                                    </div>
 
-                                    <div className="tt-class-title-row">
-                                        {cls.course_code && (
-                                            <span className="tt-course-code">{cls.course_code}</span>
-                                        )}
-                                        <span className="tt-course-name">{cls.course_name}</span>
-                                    </div>
-
-                                    <div className="tt-class-meta">
-                                        {cls.faculty && (
-                                            <span className="tt-meta-item">
-                                                <User size={13} /> {cls.faculty}
-                                            </span>
-                                        )}
-                                        {cls.room && (
-                                            <span className="tt-meta-item">
-                                                <MapPin size={13} /> {cls.room}
-                                            </span>
-                                        )}
-                                        {cls.batch && (
-                                            <span className="tt-meta-item batch">
-                                                <AlertCircle size={13} /> {cls.batch}
-                                            </span>
-                                        )}
+                                        <div className="tt-period-time-badge">
+                                            <span className="tt-time-start-hl">{formatTime12h(cls.time_start)}</span>
+                                            <span className="tt-time-to-sub">to</span>
+                                            <span className="tt-time-end-hl">{formatTime12h(cls.time_end)}</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

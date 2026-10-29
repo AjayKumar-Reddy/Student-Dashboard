@@ -1,11 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Calculator, Calendar, CalendarClock } from "lucide-react";
 import {
     RadialBarChart,
     RadialBar,
     PolarAngleAxis,
+    PieChart,
+    Pie,
+    Cell,
     Tooltip,
     ResponsiveContainer
 } from "recharts";
@@ -48,10 +51,45 @@ const AttendanceTooltip = ({ active, payload }: any) => {
 const AttendanceSection: React.FC<AttendanceSectionProps> = ({
     studentName,
     currentSem = [],
+    overallAttendance,
     onSelectSubject
 }) => {
     // Target ranges: 60, 65, 70, 75, 80, 85
     const [targetPct, setTargetPct] = useState<number>(75);
+    const [chartType, setChartType] = useState<'pie' | 'radial'>('pie');
+    const [isMobile, setIsMobile] = useState<boolean>(false);
+
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem("attendanceChartType");
+            if (saved === 'pie' || saved === 'radial') {
+                setChartType(saved);
+            }
+        } catch (e) {
+            // ignore localStorage error in private mode
+        }
+    }, []);
+
+    const handleChartTypeChange = (type: 'pie' | 'radial') => {
+        setChartType(type);
+        try {
+            localStorage.setItem("attendanceChartType", type);
+        } catch (e) {
+            // ignore
+        }
+    };
+
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(
+                typeof window !== "undefined" && 
+                (window.innerWidth <= 768 || window.matchMedia("(hover: none)").matches)
+            );
+        };
+        checkMobile();
+        window.addEventListener("resize", checkMobile);
+        return () => window.removeEventListener("resize", checkMobile);
+    }, []);
 
     const hasAttendanceData = currentSem.length > 0 && currentSem.some((s: any) =>
         (s.attendance && s.attendance > 0) ||
@@ -65,6 +103,60 @@ const AttendanceSection: React.FC<AttendanceSectionProps> = ({
         return "danger";
     };
 
+    const calculatedOverall = useMemo(() => {
+        if (typeof overallAttendance === 'number' && !isNaN(overallAttendance) && overallAttendance > 0) {
+            return Math.round(overallAttendance);
+        }
+        const valid = currentSem.filter((s: any) => typeof s.attendance === 'number' || !isNaN(Number(s.attendance)));
+        if (valid.length === 0) return 0;
+        const sum = valid.reduce((acc: number, s: any) => acc + (Number(s.attendance) || 0), 0);
+        return Math.round(sum / valid.length);
+    }, [overallAttendance, currentSem]);
+
+    const chartData = useMemo(() => {
+        return currentSem.map((s: any, i: number) => {
+            const att = Math.round(Number(s.attendance) || 0);
+            return {
+                ...s,
+                name: s.name || s.code || `Subject ${i + 1}`,
+                code: s.code || '',
+                attendance: att,
+                value: 1, // equal angular sectors for pie
+                fill: CHART_COLORS[i % CHART_COLORS.length]
+            };
+        });
+    }, [currentSem]);
+
+    // Custom Pie Slice Label to render percentage directly on each slice
+    const renderCustomPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, index }: any) => {
+        const RADIAN = Math.PI / 180;
+        const radius = innerRadius + (outerRadius - innerRadius) * 0.52;
+        const x = cx + radius * Math.cos(-midAngle * RADIAN);
+        const y = cy + radius * Math.sin(-midAngle * RADIAN);
+        const att = chartData[index]?.attendance;
+
+        if (att === undefined || att === null) return null;
+
+        return (
+            <text
+                x={x}
+                y={y}
+                fill="#ffffff"
+                textAnchor="middle"
+                dominantBaseline="central"
+                fontSize={12}
+                fontWeight={800}
+                style={{
+                    textShadow: '0 1px 4px rgba(0, 0, 0, 0.9), 0 0 2px rgba(0, 0, 0, 0.8)',
+                    pointerEvents: 'none',
+                    letterSpacing: '-0.2px'
+                }}
+            >
+                {att}%
+            </text>
+        );
+    };
+
     return (
         <div className="tab-content">
             <DashboardHeader
@@ -74,63 +166,147 @@ const AttendanceSection: React.FC<AttendanceSectionProps> = ({
             />
 
             <div className="attendance-container">
-                {/* 1. Attendance Overview Radial Distribution Chart */}
+                {/* 1. Attendance Overview Distribution Chart */}
                 <div className="chart-card">
                     <div className="chart-header">
-                        <h3 className="chart-title">Attendance Overview</h3>
-                        <p className="chart-subtitle">Subject-wise attendance distribution</p>
+                        <div className="chart-header-left">
+                            <h3 className="chart-title">Attendance Overview</h3>
+                            <p className="chart-subtitle">Subject-wise attendance breakdown</p>
+                        </div>
+                        <div className="chart-view-toggle">
+                            <button
+                                type="button"
+                                className={`chart-toggle-btn ${chartType === 'pie' ? 'active' : ''}`}
+                                onClick={() => handleChartTypeChange('pie')}
+                            >
+                                Pie Graph
+                            </button>
+                            <button
+                                type="button"
+                                className={`chart-toggle-btn ${chartType === 'radial' ? 'active' : ''}`}
+                                onClick={() => handleChartTypeChange('radial')}
+                            >
+                                Radial Rings
+                            </button>
+                        </div>
                     </div>
                     <div className="chart-body attendance-chart-body">
                         {hasAttendanceData ? (
                             <>
                                 <div className="chart-container">
                                     <ResponsiveContainer width="100%" height={380}>
-                                        <RadialBarChart
-                                            cx="50%"
-                                            cy="50%"
-                                            innerRadius="25%"
-                                            outerRadius="100%"
-                                            barSize={12}
-                                            data={currentSem.map((s: any, i: number) => ({
-                                                ...s,
-                                                attendance: Math.round(Number(s.attendance) || 0),
-                                                fill: CHART_COLORS[i % CHART_COLORS.length]
-                                            }))}
-                                            startAngle={90}
-                                            endAngle={-270}
-                                        >
-                                            <PolarAngleAxis
-                                                type="number"
-                                                domain={[0, 100]}
-                                                angleAxisId={0}
-                                                tick={false}
-                                            />
-                                            <RadialBar
-                                                background={{ fill: 'var(--bg-primary)' }}
-                                                dataKey="attendance"
-                                                cornerRadius={20}
-                                                angleAxisId={0}
-                                                onClick={(d: any) => onSelectSubject?.(d.payload)}
-                                            />
-                                            <Tooltip content={<AttendanceTooltip />} cursor={{ fill: 'var(--bg-primary)' }} />
-                                        </RadialBarChart>
+                                        {chartType === 'pie' ? (
+                                            <PieChart>
+                                                <Pie
+                                                    data={chartData}
+                                                    cx="50%"
+                                                    cy="50%"
+                                                    innerRadius="56%"
+                                                    outerRadius="88%"
+                                                    paddingAngle={3}
+                                                    dataKey="value"
+                                                    label={renderCustomPieLabel}
+                                                    labelLine={false}
+                                                    onClick={(d: any) => onSelectSubject?.(d.payload)}
+                                                    isAnimationActive={true}
+                                                >
+                                                    {chartData.map((entry, index) => (
+                                                        <Cell 
+                                                            key={`cell-${index}`} 
+                                                            fill={entry.fill} 
+                                                            stroke="rgba(0, 0, 0, 0.4)" 
+                                                            strokeWidth={2}
+                                                            style={{ outline: 'none', cursor: 'pointer' }}
+                                                        />
+                                                    ))}
+                                                </Pie>
+                                                {!isMobile && (
+                                                    <Tooltip content={<AttendanceTooltip />} cursor={false} />
+                                                )}
+                                            </PieChart>
+                                        ) : (
+                                            <RadialBarChart
+                                                cx="50%"
+                                                cy="50%"
+                                                innerRadius="30%"
+                                                outerRadius="100%"
+                                                barSize={12}
+                                                data={chartData}
+                                                startAngle={90}
+                                                endAngle={-270}
+                                            >
+                                                <PolarAngleAxis
+                                                    type="number"
+                                                    domain={[0, 100]}
+                                                    angleAxisId={0}
+                                                    tick={false}
+                                                />
+                                                <RadialBar
+                                                    background={{ fill: 'rgba(255, 255, 255, 0.05)' }}
+                                                    dataKey="attendance"
+                                                    cornerRadius={10}
+                                                    angleAxisId={0}
+                                                    label={{
+                                                        position: 'insideStart',
+                                                        fill: '#ffffff',
+                                                        fontSize: 10,
+                                                        fontWeight: 800,
+                                                        formatter: (val: any) => `${val}%`
+                                                    }}
+                                                    onClick={(d: any) => onSelectSubject?.(d.payload)}
+                                                />
+                                                {!isMobile && (
+                                                    <Tooltip content={<AttendanceTooltip />} cursor={false} />
+                                                )}
+                                            </RadialBarChart>
+                                        )}
                                     </ResponsiveContainer>
+
+                                    {/* Central Stat Hub */}
+                                    <div className="radial-center-stat">
+                                        <span className="radial-overall-val">{calculatedOverall}%</span>
+                                        <span className="radial-overall-label">Overall</span>
+                                        <span className={`radial-status-pill ${getStatusType(calculatedOverall)}`}>
+                                            {calculatedOverall >= 85 ? 'Safe' : calculatedOverall >= 75 ? 'Warning' : 'Critical'}
+                                        </span>
+                                    </div>
                                 </div>
+
                                 <div className="chart-legend-custom">
-                                    {currentSem.map((s: any, i: number) => (
-                                        <button
-                                            type="button"
-                                            key={s.code || s.name || i}
-                                            className="legend-item-custom"
-                                            onClick={() => onSelectSubject?.(s)}
-                                        >
-                                            <div
-                                                className="legend-dot-custom"
-                                                style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}
-                                            />
-                                            <span className="legend-label-custom">{s.name}</span>
-                                        </button>
-                                    ))}
+                                    {chartData.map((s: any, i: number) => {
+                                        const statusType = getStatusType(s.attendance);
+                                        return (
+                                            <button
+                                                type="button"
+                                                key={s.code || s.name || i}
+                                                className="legend-item-custom"
+                                                onClick={() => onSelectSubject?.(s)}
+                                            >
+                                                <div className="legend-item-left">
+                                                    <div
+                                                        className="legend-dot-custom"
+                                                        style={{ backgroundColor: s.fill }}
+                                                    />
+                                                    <div className="legend-text-col">
+                                                        <span className="legend-label-custom">{s.name}</span>
+                                                        {s.code && <span className="legend-code-custom">{s.code}</span>}
+                                                    </div>
+                                                </div>
+                                                <div className="legend-pct-wrap">
+                                                    <span 
+                                                        className={`legend-pct-badge ${statusType}`} 
+                                                        style={{ 
+                                                            color: s.fill, 
+                                                            borderColor: `${s.fill}40`, 
+                                                            backgroundColor: `${s.fill}18` 
+                                                        }}
+                                                    >
+                                                        {s.attendance}%
+                                                    </span>
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </>
                         ) : (

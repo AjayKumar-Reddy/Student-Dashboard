@@ -327,3 +327,295 @@
         width: 28%;
     }
 }
+
+/* ─────────────────────────────────────────────────────────────
+   Attendance Chart Styles: View Toggle, Center Stat & Legend
+   ───────────────────────────────────────────────────────────── */
+
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.chart-header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.chart-view-toggle {
+    display: flex;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 9px;
+    padding: 3px;
+    gap: 3px;
+}
+
+.chart-toggle-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted, #94a3b8);
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 5px 11px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.chart-toggle-btn:hover {
+    color: var(--text-primary, #ffffff);
+}
+
+.chart-toggle-btn.active {
+    background: rgba(0, 173, 181, 0.16);
+    color: var(--accent-primary, #00ADB5);
+    border: 1px solid rgba(0, 173, 181, 0.3);
+}
+
+/* Center Overall Stat */
+.chart-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.radial-center-stat {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 1;
+    text-align: center;
+}
+
+/* Ensure chart tooltip popup always floats above the center percentage */
+.recharts-tooltip-wrapper {
+    z-index: 9999 !important;
+    pointer-events: none !important;
+}
+
+.custom-chart-tooltip {
+    z-index: 10000 !important;
+    position: relative;
+}
+
+.radial-overall-val {
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--text-primary, #ffffff);
+    letter-spacing: -0.5px;
+}
+
+.radial-overall-label {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--text-muted, #94a3b8);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 3px;
+}
+
+.radial-status-pill {
+    margin-top: 5px;
+    font-size: 9.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    padding: 2px 7px;
+    border-radius: 9999px;
+}
+
+.radial-status-pill.safe {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.radial-status-pill.warning {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.radial-status-pill.danger {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* Upgraded Legend */
+.chart-legend-custom {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    justify-content: center;
+    min-width: 0;
+}
+
+.legend-item-custom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 9px;
+    padding: 7px 12px;
+    cursor: pointer;
+    font: inherit;
+    text-align: left;
+    transition: all 0.2s ease;
+    width: 100%;
+}
+
+.legend-item-custom:hover {
+    background: rgba(255, 255, 255, 0.045);
+    border-color: rgba(255, 255, 255, 0.1);
+    transform: translateX(2px);
+}
+
+.legend-item-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex: 1;
+}
+
+.legend-dot-custom {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.legend-text-col {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+
+.legend-label-custom {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary, #ffffff);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.legend-code-custom {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-muted, #94a3b8);
+    letter-spacing: 0.3px;
+}
+
+.legend-pct-wrap {
+    flex-shrink: 0;
+}
+
+.legend-pct-badge {
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 6px;
+    border: 1px solid;
+    white-space: nowrap;
+}
+
+/* Mobile & Touch: Disable hover effects completely */
+@media (max-width: 768px), (hover: none) {
+    .custom-chart-tooltip,
+    .recharts-tooltip-wrapper {
+        display: none !important;
+        pointer-events: none !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+    }
+
+    .recharts-radial-bar-sector:hover,
+    .recharts-pie-sector:hover,
+    .recharts-sector:hover {
+        opacity: 1 !important;
+        filter: none !important;
+        transform: none !important;
+    }
+
+    .legend-item-custom:hover {
+        background: rgba(255, 255, 255, 0.02) !important;
+        transform: none !important;
+    }
+
+    .chart-legend-custom {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 6px !important;
+        width: 100% !important;
+        padding-bottom: 4px;
+    }
+
+    .legend-item-custom {
+        padding: 5px 8px !important;
+        gap: 6px !important;
+        min-width: 0 !important;
+        border-radius: 7px !important;
+        background: rgba(255, 255, 255, 0.02) !important;
+    }
+
+    .legend-item-custom:hover {
+        background: rgba(255, 255, 255, 0.02) !important;
+        transform: none !important;
+    }
+
+    .legend-dot-custom {
+        width: 7px !important;
+        height: 7px !important;
+    }
+
+    .legend-label-custom {
+        font-size: 11px !important;
+        font-weight: 500;
+        line-height: 1.2;
+    }
+
+    .legend-code-custom {
+        display: none !important;
+    }
+
+    .legend-pct-badge {
+        font-size: 10.5px !important;
+        padding: 1.5px 5px !important;
+        border-radius: 4px !important;
+    }
+
+    .radial-center-stat {
+        top: 50%;
+        left: 50%;
+    }
+
+    .radial-overall-val {
+        font-size: 22px;
+    }
+
+    .radial-overall-label {
+        font-size: 9.5px;
+    }
+}

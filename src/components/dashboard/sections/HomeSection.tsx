@@ -417,16 +417,34 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
                         {nextTwoClasses.map(({ cls, status }, idx) => (
                             <div
                                 key={`${cls.course_code}-${cls.time_start}-${idx}`}
-                                className={`home-class-tile ${status === 'in-progress' ? 'ongoing-class' : ''}`}
+                                className={`home-tt-period-row ${status === 'in-progress' ? 'ongoing-period' : ''}`}
                                 style={{ animationDelay: `${0.1 + idx * 0.08}s` }}
                             >
-                                <div className="home-class-top">
-                                    <div className="home-card-time-badge">
-                                        <span className="home-card-time-start">{formatTime12h(cls.time_start)}</span>
-                                        <span className="home-card-time-sep">to</span>
-                                        <span className="home-card-time-end">{formatTime12h(cls.time_end)}</span>
+                                {/* Column 1: Course Info */}
+                                <div className="home-tt-period-left">
+                                    <h4 className="home-tt-period-name">{cls.course_name}</h4>
+                                    <div className="home-tt-period-code">{cls.course_code}</div>
+                                    <div className="home-tt-period-meta">
+                                        {cls.room && (
+                                            <span className="home-meta-item">
+                                                <MapPin size={11} />
+                                                <span>{cls.room}</span>
+                                            </span>
+                                        )}
+                                        {cls.faculty && (
+                                            <span className="home-meta-item">
+                                                <User size={11} />
+                                                <span>{cls.faculty}</span>
+                                            </span>
+                                        )}
+                                        {cls.batch && (
+                                            <span className="home-batch-chip">{cls.batch}</span>
+                                        )}
                                     </div>
+                                </div>
 
+                                {/* Column 2: Status on top, Time below */}
+                                <div className="home-tt-period-right">
                                     {status === 'in-progress' ? (
                                         <span className="home-class-status-pill ongoing">
                                             <span className="home-class-live-dot" />
@@ -437,32 +455,12 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
                                             {idx === 0 ? "Next Up" : "Upcoming"}
                                         </span>
                                     )}
-                                </div>
 
-                                <div className="home-class-main">
-                                    <h4 className="home-class-name">{cls.course_name}</h4>
-                                    <span className="home-class-code-tag">{cls.course_code}</span>
-                                </div>
-
-                                <div className="home-class-meta">
-                                    {cls.room && (
-                                        <span className="home-class-meta-item">
-                                            <MapPin size={12} />
-                                            <span>{cls.room}</span>
-                                        </span>
-                                    )}
-                                    {cls.faculty && (
-                                        <span className="home-class-meta-item">
-                                            <User size={12} />
-                                            <span>{cls.faculty}</span>
-                                        </span>
-                                    )}
-                                    {cls.batch && (
-                                        <span className="home-class-meta-item">
-                                            <Layers size={12} />
-                                            <span>{cls.batch}</span>
-                                        </span>
-                                    )}
+                                    <div className="home-period-time-badge">
+                                        <span className="home-time-start-hl">{formatTime12h(cls.time_start)}</span>
+                                        <span className="home-time-to-sub">to</span>
+                                        <span className="home-time-end-hl">{formatTime12h(cls.time_end)}</span>
+                                    </div>
                                 </div>
                             </div>
                         ))}
@@ -513,10 +511,16 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
                                                 <h5 className="home-tt-period-name">{cls.course_name}</h5>
                                                 <div className="home-tt-period-code">{cls.course_code}</div>
                                                 <div className="home-tt-period-meta">
+                                                    {cls.room && (
+                                                        <span className="home-meta-item">
+                                                            <MapPin size={11} />
+                                                            <span>{cls.room}</span>
+                                                        </span>
+                                                    )}
                                                     {cls.faculty && (
                                                         <span className="home-meta-item">
                                                             <User size={11} />
-                                                            {cls.faculty}
+                                                            <span>{cls.faculty}</span>
                                                         </span>
                                                     )}
                                                     {cls.batch && (
@@ -525,29 +529,24 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
                                                 </div>
                                             </div>
 
-                                            {/* Column 2 (Middle on Desktop): Highlighted Start Time & End Time */}
-                                            <div className="home-tt-period-middle">
+                                            {/* Column 2: Status on top, Time below */}
+                                            <div className="home-tt-period-right">
+                                                {isOngoing ? (
+                                                    <span className="home-class-status-pill ongoing">
+                                                        <span className="home-class-live-dot" />
+                                                        Ongoing
+                                                    </span>
+                                                ) : isToday ? (
+                                                    <span className={`home-class-status-pill ${status}`}>
+                                                        {status === 'completed' ? 'Completed' : 'Upcoming'}
+                                                    </span>
+                                                ) : null}
+
                                                 <div className="home-period-time-badge">
                                                     <span className="home-time-start-hl">{formatTime12h(cls.time_start)}</span>
                                                     <span className="home-time-to-sub">to</span>
                                                     <span className="home-time-end-hl">{formatTime12h(cls.time_end)}</span>
                                                 </div>
-                                            </div>
-
-                                            {/* Column 3: Room Number & Ongoing Status at Right End */}
-                                            <div className="home-tt-period-right">
-                                                {isOngoing && (
-                                                    <span className="home-class-status-pill ongoing">
-                                                        <span className="home-class-live-dot" />
-                                                        Ongoing
-                                                    </span>
-                                                )}
-                                                {cls.room && (
-                                                    <div className="home-tt-room-end">
-                                                        <MapPin size={12} />
-                                                        <span>{cls.room}</span>
-                                                    </div>
-                                                )}
                                             </div>
                                         </div>
                                     );
