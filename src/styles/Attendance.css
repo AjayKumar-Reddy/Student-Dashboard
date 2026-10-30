@@ -8,10 +8,10 @@
 
 /* Calculator & Target Selector Card */
 .att-calculator-card {
-    background: var(--bg-secondary, rgba(17, 24, 39, 0.7));
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+    background: var(--glass-bg, linear-gradient(135deg, rgba(17, 26, 44, 0.72) 0%, rgba(10, 16, 28, 0.58) 100%));
+    backdrop-filter: var(--glass-blur, blur(12px) saturate(160%));
+    -webkit-backdrop-filter: var(--glass-blur, blur(12px) saturate(160%));
+    border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
     border-radius: 14px;
     padding: 14px 18px;
     display: flex;
@@ -19,6 +19,7 @@
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 10px;
+    box-shadow: var(--glass-shadow, 0 8px 32px rgba(0, 0, 0, 0.3)), var(--glass-shine, inset 0 1px 1px rgba(255, 255, 255, 0.1));
 }
 
 .att-calc-title {
@@ -67,16 +68,17 @@
 
 /* Attendance Table Card */
 .att-table-card {
-    background: var(--bg-secondary, rgba(17, 24, 39, 0.7));
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
-    border-radius: 14px;
-    padding: 18px;
+    background: var(--glass-bg, linear-gradient(135deg, rgba(17, 26, 44, 0.72) 0%, rgba(10, 16, 28, 0.58) 100%));
+    backdrop-filter: var(--glass-blur, blur(12px) saturate(160%));
+    -webkit-backdrop-filter: var(--glass-blur, blur(12px) saturate(160%));
+    border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.08));
+    border-radius: 16px;
+    padding: 20px;
     display: flex;
     flex-direction: column;
     gap: 14px;
     width: 100%;
+    box-shadow: var(--glass-shadow, 0 8px 32px rgba(0, 0, 0, 0.3)), var(--glass-shine, inset 0 1px 1px rgba(255, 255, 255, 0.1));
 }
 
 .att-table-header {

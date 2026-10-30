@@ -2996,9 +2996,12 @@
     justify-content: center;
     text-align: center;
     padding: 28px 20px;
-    background: rgba(19, 26, 38, 0.4);
+    background: linear-gradient(135deg, rgba(19, 26, 38, 0.5) 0%, rgba(13, 19, 30, 0.35) 100%);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border: 1px dashed rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
+    border-radius: 14px;
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05);
     margin: 4px 0;
     position: relative;
     overflow: hidden;
@@ -3007,7 +3010,7 @@
 
 .dashboard-empty-state:hover {
     border-color: rgba(0, 173, 181, 0.25);
-    background: rgba(19, 26, 38, 0.5);
+    background: linear-gradient(135deg, rgba(19, 26, 38, 0.6) 0%, rgba(13, 19, 30, 0.45) 100%);
 }
 
 .empty-state-icon-wrap {
