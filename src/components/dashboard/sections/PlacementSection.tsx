@@ -32,15 +32,16 @@ interface ParsedEvent {
 // Robust Date Parser
 const parseDate = (str: string): Date | null => {
     if (!str) return null;
-    const cleaned = str.replace(/-/g, "/").trim();
-    const parts = cleaned.split("/");
-    if (parts.length === 3 && parts[2].length === 4) {
-        const day = Number.parseInt(parts[0], 10);
-        const month = Number.parseInt(parts[1], 10) - 1;
-        const year = Number.parseInt(parts[2], 10);
+    const cleaned = str.trim();
+    // Try DD-MM-YYYY or DD/MM/YYYY with optional time
+    const dmyMatch = cleaned.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+    if (dmyMatch) {
+        const day = Number.parseInt(dmyMatch[1], 10);
+        const month = Number.parseInt(dmyMatch[2], 10) - 1;
+        const year = Number.parseInt(dmyMatch[3], 10);
         return new Date(year, month, day);
     }
-    const d = new Date(str);
+    const d = new Date(cleaned);
     return Number.isNaN(d.getTime()) ? null : d;
 };
 
@@ -79,8 +80,12 @@ const extractDateByPattern = (text: string, pattern: RegExp): string | null => {
     const match = text.match(pattern);
     if (!match) return null;
     const rawDate = match[1].trim();
-    const dateOnlyMatch = rawDate.match(/\b\d{1,2}[-/\s]\d{1,2}[-/\s]\d{4}\b/);
-    return dateOnlyMatch ? dateOnlyMatch[0] : rawDate.split(/(?:\s{2,}|,|\.|\()/)[0].trim();
+    const dateMatch = rawDate.match(/\b\d{1,2}(?:st|nd|rd|th)?[-/\s]+(?:[A-Za-z]{3,9}|\d{1,2})[-/\s]+\d{2,4}\b|\b\d{4}[-/]\d{1,2}[-/]\d{1,2}\b/);
+    if (dateMatch) {
+        const timeMatch = rawDate.slice(rawDate.indexOf(dateMatch[0]) + dateMatch[0].length).match(/^\s+(\d{1,2}:\d{2}(?:\s*[AP]M)?)/i);
+        return timeMatch ? `${dateMatch[0]} ${timeMatch[1].trim()}` : dateMatch[0];
+    }
+    return rawDate.split(/(?:\s{2,}|,|\.|\()/)[0].trim() || null;
 };
 
 const extractCtc = (text: string): string | null => {
@@ -94,6 +99,7 @@ const extractStatus = (text: string): string => {
     const statusMatch = text.match(/(?:Status)[:\s]+([a-z\s]+)/i);
     if (statusMatch) return statusMatch[1].trim();
     if (/under\s*progress/i.test(text)) return "Under Progress";
+    if (/registration\s*closed/i.test(text)) return "Registration Closed";
     if (/registered/i.test(text)) return "Registered";
     if (/eligible/i.test(text)) return "Eligible";
     if (/applied/i.test(text)) return "Applied";
@@ -112,17 +118,28 @@ const getStatusColor = (status: string): string => {
 
 // Parser to extract fields from unstructured Contineo scrapings
 const parseEventData = (event: any): ParsedEvent => {
-    const title = event.title || "";
-    const allText = [event.title, event.textContent, ...(event.details || [])].join(" ");
-    const { company, type } = extractCompanyAndType(title, event.textContent || "");
+    const title = event.title || event.company || "";
+    const allText = [
+        event.title,
+        event.textContent,
+        ...(event.details || []),
+        event.appliedDate ? `Applied Date: ${event.appliedDate}` : "",
+        event.eventDate ? `Event Date: ${event.eventDate}` : ""
+    ].filter(Boolean).join("\n");
+    const { company, type } = extractCompanyAndType(title, event.type || event.textContent || allText);
+
+    const appliedDate = event.appliedDate || extractDateByPattern(allText, /(?:Applied\s+(?:On|Date)|Applied|Apply\s+Before)[:\s]+([^\n\r,;()]+)/i);
+    const eventDate = event.eventDate || extractDateByPattern(allText, /(?:Event\s+Date|Date\s+of\s+Event|Drive\s+Date|Interview\s+Date)[:\s]+([^\n\r,;()]+)/i);
+    const ctc = event.ctc || extractCtc(allText);
+    const status = event.status || extractStatus(allText);
 
     return {
-        company,
-        type,
-        appliedDate: extractDateByPattern(allText, /(?:Applied\s+(?:On|Date)|Applied|Apply\s+Before)[:\s]+([^\n\r,;()]+)/i),
-        eventDate: extractDateByPattern(allText, /(?:Event\s+Date|Date\s+of\s+Event|Event)[:\s]+([^\n\r,;()]+)/i),
-        ctc: extractCtc(allText),
-        status: extractStatus(allText),
+        company: event.company || company,
+        type: event.type || type,
+        appliedDate,
+        eventDate,
+        ctc,
+        status,
         actionLink: event.actionLink,
         raw: event
     };
@@ -539,7 +556,7 @@ const PlacementSection: React.FC<PlacementSectionProps> = ({
                                             <span className="desktop-step-label">
                                                 {typeLabel.toLowerCase().includes("register") ? "Apply Before" : "Applied On"}
                                             </span>
-                                            <span className="desktop-step-value">{parsed.appliedDate || "TBD"}</span>
+                                            <span className="desktop-step-value">{parsed.appliedDate || "To Be Announced"}</span>
                                             {appliedRelative ? (
                                                 <span style={{ fontSize: "11px", color: appliedRelative.color, fontWeight: "600" }}>{appliedRelative.text}</span>
                                             ) : (
@@ -550,7 +567,7 @@ const PlacementSection: React.FC<PlacementSectionProps> = ({
                                         {/* 3. Event Date */}
                                         <div className="desktop-step-card">
                                             <span className="desktop-step-label">Event Date</span>
-                                            <span className="desktop-step-value">{parsed.eventDate || "TBD"}</span>
+                                            <span className="desktop-step-value">{parsed.eventDate || "To Be Announced"}</span>
                                             {eventRelative ? (
                                                 <span style={{ fontSize: "11px", color: eventRelative.color, fontWeight: "600" }}>{eventRelative.text}</span>
                                             ) : (
@@ -560,7 +577,7 @@ const PlacementSection: React.FC<PlacementSectionProps> = ({
 
                                         {/* 4. Status & CTC */}
                                         <div className="desktop-step-card">
-                                            <span style={{ fontSize: "13px", fontWeight: "800", color: "var(--accent-primary, #00ADB5)", marginBottom: "10px" }}>{parsed.ctc || "CTC: TBD"}</span>
+                                            <span style={{ fontSize: "13px", fontWeight: "800", color: "var(--accent-primary, #00ADB5)", marginBottom: "10px" }}>{parsed.ctc || "CTC: To Be Announced"}</span>
                                             <span style={{ 
                                                 fontSize: "15px", 
                                                 fontWeight: "800", 
@@ -597,7 +614,7 @@ const PlacementSection: React.FC<PlacementSectionProps> = ({
                                                 {typeLabel.toLowerCase().includes("register") ? "Apply Before" : "Applied On"}
                                             </h4>
                                             <span className="mobile-step-subtitle">
-                                                {parsed.appliedDate || "TBD"}{appliedRelative && ` • ${appliedRelative.text}`}
+                                                {parsed.appliedDate || "To Be Announced"}{appliedRelative && ` • ${appliedRelative.text}`}
                                             </span>
                                         </div>
                                     </div>
@@ -614,7 +631,7 @@ const PlacementSection: React.FC<PlacementSectionProps> = ({
                                         <div className="mobile-step-content">
                                             <h4 className="mobile-step-title">Event Date</h4>
                                             <span className="mobile-step-subtitle">
-                                                {parsed.eventDate || "TBD"}{eventRelative && ` • ${eventRelative.text}`}
+                                                {parsed.eventDate || "To Be Announced"}{eventRelative && ` • ${eventRelative.text}`}
                                             </span>
                                         </div>
                                     </div>
@@ -633,7 +650,7 @@ const PlacementSection: React.FC<PlacementSectionProps> = ({
                                         </div>
                                         <div className="mobile-step-content">
                                             <h4 className="mobile-step-title" style={{ color: "var(--accent-primary, #00ADB5)" }}>
-                                                {parsed.ctc || "CTC: TBD"}
+                                                {parsed.ctc || "CTC: To Be Announced"}
                                             </h4>
                                             <span className="mobile-step-subtitle" style={{ 
                                                 fontWeight: "700", 
