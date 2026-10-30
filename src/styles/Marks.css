@@ -166,6 +166,8 @@
     padding: 14px 18px;
     cursor: pointer;
     user-select: none;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
     transition: background 0.2s ease;
 }
 
@@ -269,60 +271,53 @@
 
 .cie-acc-chevron {
     color: var(--text-muted, #94a3b8);
-    transition: transform 0.25s ease, color 0.2s ease;
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), color 0.2s ease;
     flex-shrink: 0;
+    will-change: transform;
 }
 
-.cie-acc-chevron.rotated {
+.cie-acc-chevron.rotated,
+.cie-accordion-item.expanded .cie-acc-chevron {
     transform: rotate(180deg);
     color: var(--accent-primary, #00ADB5);
 }
 
-/* ── Accordion Panel (expandable) ── */
+/* ── Accordion Panel (smooth CSS grid expandable) ── */
 .cie-accordion-panel {
-    max-height: 0;
-    opacity: 0;
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.28s cubic-bezier(0.16, 1, 0.3, 1), 
+                border-color 0.25s ease;
     overflow: hidden;
-    transition: max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1), 
-                opacity 0.25s ease,
-                padding 0.25s ease;
-    padding: 0 18px;
-    border-top: 0px solid transparent;
+    padding: 0;
+    border-top: 1px solid transparent;
+    will-change: grid-template-rows;
 }
 
-/* Desktop: expand on hover or click */
-@media (hover: hover) and (pointer: fine) {
-    .cie-accordion-item:hover .cie-accordion-panel,
-    .cie-accordion-item.expanded .cie-accordion-panel {
-        max-height: 800px;
-        opacity: 1;
-        padding: 0 18px 18px 18px;
-        border-top: 1px solid rgba(255, 255, 255, 0.06);
-    }
-
-    .cie-accordion-item:hover .cie-acc-chevron,
-    .cie-accordion-item.expanded .cie-acc-chevron {
-        transform: rotate(180deg);
-        color: var(--accent-primary, #00ADB5);
-    }
-}
-
-/* Mobile / touch: expand only on tap (via .expanded class) */
-@media (hover: none), (pointer: coarse) {
-    .cie-accordion-item.expanded .cie-accordion-panel {
-        max-height: 900px;
-        opacity: 1;
-        padding: 0 14px 16px 14px;
-        border-top: 1px solid rgba(255, 255, 255, 0.06);
-    }
+.cie-accordion-item.expanded .cie-accordion-panel {
+    grid-template-rows: 1fr;
+    border-top-color: rgba(255, 255, 255, 0.07);
 }
 
 /* ═══════════════ CIE Expanded Modern Cards ═══════════════ */
 .cie-expanded-inner {
+    min-height: 0;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     gap: 16px;
-    padding-top: 14px;
+    padding: 0 18px;
+    opacity: 0;
+    transform: translateY(-6px);
+    transition: opacity 0.22s ease,
+                transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+                padding 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cie-accordion-item.expanded .cie-expanded-inner {
+    opacity: 1;
+    transform: translateY(0);
+    padding: 6px 18px 18px 18px;
 }
 
 .cie-group-block {
@@ -693,16 +688,20 @@
     }
 
     .cie-accordion-panel {
-        padding: 0 12px;
+        padding: 0;
     }
 
     .cie-accordion-item.expanded .cie-accordion-panel {
-        padding: 0 12px 14px 12px;
+        padding: 0;
     }
 
     .cie-expanded-inner {
         gap: 12px;
-        padding-top: 10px;
+        padding: 0 12px;
+    }
+
+    .cie-accordion-item.expanded .cie-expanded-inner {
+        padding: 4px 12px 14px 12px;
     }
 
     .cie-cards-grid {

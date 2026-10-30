@@ -12,6 +12,24 @@ import {
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import "@/styles/Marks.css";
 
+/**
+ * Extracts acronym / short form from a subject name.
+ * Example: "Human Resource Management" -> "HRM"
+ *          "Distributed Computing" -> "DC"
+ */
+export const getSubjectShortName = (name?: string, fallbackCode?: string): string => {
+    if (!name || typeof name !== 'string' || !name.trim()) {
+        return fallbackCode || '';
+    }
+    const cleaned = name.replace(/[()[\]{}:;&/\\,-]/g, ' ').trim();
+    const words = cleaned.split(/\s+/).filter(Boolean);
+    const stopWords = new Set(['and', 'of', 'in', 'to', 'for', 'the', 'a', 'an', 'on', 'with']);
+    const filteredWords = words.length > 1 ? words.filter(w => !stopWords.has(w.toLowerCase())) : words;
+    const targetWords = filteredWords.length > 0 ? filteredWords : words;
+    const acronym = targetWords.map(w => w[0]?.toUpperCase() || '').join('');
+    return acronym || fallbackCode || '';
+};
+
 const MarksTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
         const data = payload[0].payload;
@@ -25,6 +43,12 @@ const MarksTooltip = ({ active, payload }: any) => {
                     <span className="tooltip-label">Code</span>
                     <span className="tooltip-value">{data.code}</span>
                 </div>
+                {data.shortName && (
+                    <div className="tooltip-row">
+                        <span className="tooltip-label">Short Name</span>
+                        <span className="tooltip-value" style={{ color: 'var(--accent-primary)', fontWeight: 700 }}>{data.shortName}</span>
+                    </div>
+                )}
                 <div className="tooltip-row">
                     <span className="tooltip-label">Internal Marks</span>
                     <span className="tooltip-value" style={{ color: 'var(--accent-primary)', fontWeight: 700 }}>{marks} / 50</span>
@@ -56,11 +80,12 @@ const CIEBarChart = React.memo(({
             <BarChart data={data} margin={{ top: 28, right: 10, left: -15, bottom: 25 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" vertical={false} />
                 <XAxis 
-                    dataKey="code" 
+                    dataKey="shortName" 
                     stroke="var(--text-muted)" 
-                    style={{ fontSize: '11px', fontWeight: 600 }} 
+                    style={{ fontSize: '11px', fontWeight: 700 }} 
                     axisLine={false} 
                     tickLine={false} 
+                    interval={0}
                 />
                 <YAxis 
                     domain={[0, 55]} 
@@ -76,7 +101,9 @@ const CIEBarChart = React.memo(({
                     radius={[6, 6, 0, 0]} 
                     barSize={24} 
                     fill="var(--accent-primary, #00ADB5)"
-                    isAnimationActive={false}
+                    isAnimationActive={true}
+                    animationDuration={450}
+                    animationEasing="ease-out"
                     onClick={(entry: any) => entry && onSelectSubject?.(entry.payload)}
                     style={{ cursor: 'pointer' }}
                 >
@@ -179,8 +206,11 @@ const MarksSection: React.FC<MarksSectionProps> = ({
                 marks = Math.round(subj.marks);
             }
 
+            const shortName = getSubjectShortName(subj.name, subj.code);
+
             return {
                 ...subj,
+                shortName,
                 marks
             };
         });

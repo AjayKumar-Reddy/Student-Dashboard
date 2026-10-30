@@ -209,6 +209,9 @@ const AttendanceSection: React.FC<AttendanceSectionProps> = ({
                                                     labelLine={false}
                                                     onClick={(d: any) => onSelectSubject?.(d.payload)}
                                                     isAnimationActive={true}
+                                                    animationDuration={450}
+                                                    animationEasing="ease-out"
+                                                    animationBegin={0}
                                                 >
                                                     {chartData.map((entry, index) => (
                                                         <Cell 
@@ -246,6 +249,10 @@ const AttendanceSection: React.FC<AttendanceSectionProps> = ({
                                                     dataKey="attendance"
                                                     cornerRadius={10}
                                                     angleAxisId={0}
+                                                    isAnimationActive={true}
+                                                    animationDuration={500}
+                                                    animationEasing="ease-out"
+                                                    animationBegin={0}
                                                     label={{
                                                         position: 'insideStart',
                                                         fill: '#ffffff',
