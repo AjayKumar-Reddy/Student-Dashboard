@@ -4,7 +4,8 @@ import React, { useEffect, useState, useMemo, useRef, useCallback } from "react"
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import axios from "axios";
 import {
-    Target, Award, Menu, X, Gamepad2, LogOut, Briefcase, Compass, Download, Trash2, Github, Calendar, UserCheck, Home
+    Target, Award, Menu, X, Gamepad2, LogOut, Briefcase, Compass, Download, Trash2, Github, Calendar, UserCheck, Home,
+    RefreshCw, Clock
 } from "lucide-react";
 import "@/styles/StudentDashboard.css";
 import { API_BASE_URL } from "@/config/api.config";
@@ -15,6 +16,7 @@ import Link from "next/link";
 
 // Update Components
 import { useCooldown } from "@/hooks/useCooldown";
+import { UpdateButton } from "@/components/dashboard/UpdateButton";
 
 // Section Components
 import AttendanceSection from "@/components/dashboard/sections/AttendanceSection";
@@ -370,6 +372,10 @@ export default function StudentDashboard() {
         }
     };
 
+    const handleSelectSubject = useCallback((subject: any) => {
+        setSelectedSubject(subject);
+    }, []);
+
     const handleUpdate = async () => {
         if (isCooldownActive) return;
         const sessionId = localStorage.getItem("studentSessionId");
@@ -438,6 +444,17 @@ export default function StudentDashboard() {
                         </button>
                     )}
                 </nav>
+
+                {/* PC Sidebar Update Button */}
+                <div className="sidebar-actions-container">
+                    <UpdateButton
+                        onClick={handleUpdate}
+                        isLoading={updateStatus === 'loading'}
+                        cooldownActive={isCooldownActive}
+                        formattedCooldown={formatTime}
+                    />
+                </div>
+
                 <SidebarProfile 
                     user={student} 
                     onLogout={handleLogout} 
@@ -560,7 +577,7 @@ export default function StudentDashboard() {
                                     studentName={student?.name}
                                     currentSem={currentSem}
                                     overallAttendance={overallAttendance}
-                                    onSelectSubject={(subject) => setSelectedSubject(subject)}
+                                    onSelectSubject={handleSelectSubject}
                                 />
                             )}
                             {activeTab === 'marks' && (
@@ -574,7 +591,7 @@ export default function StudentDashboard() {
                                     maxCredits={maxCredits}
                                     GRADE_COLORS={GRADE_COLORS}
                                     isLateralEntry={isLateralEntry}
-                                    onSelectSubject={(subject) => setSelectedSubject(subject)}
+                                    onSelectSubject={handleSelectSubject}
                                 />
                             )}
                             {(activeTab === 'home' || activeTab === 'performance' || activeTab === 'timetable') && (
@@ -586,7 +603,7 @@ export default function StudentDashboard() {
                                     maxCredits={maxCredits}
                                     currentCgpa={currentCgpa}
                                     timetableData={detailsBlob.timetable}
-                                    onSelectSubject={(subject) => setSelectedSubject(subject)}
+                                    onSelectSubject={handleSelectSubject}
                                     handleUpdate={handleUpdate}
                                     updateStatus={updateStatus}
                                     isCooldownActive={isCooldownActive}
@@ -630,11 +647,11 @@ export default function StudentDashboard() {
             {/* Mobile Bottom Navigation */}
             <nav className="mobile-bottom-nav">
                 {[
-                    { id: 'home', icon: <Home size={20} />, label: 'Home' },
-                    { id: 'attendance', icon: <UserCheck size={20} />, label: 'Attendance' },
-                    { id: 'marks', icon: <Award size={20} />, label: 'Marks' },
-                    { id: 'placement', icon: <Briefcase size={20} />, label: 'Placements' },
-                    { id: 'simulator', icon: <Gamepad2 size={20} />, label: 'Sim' },
+                    { id: 'home', icon: <Home size={19} />, label: 'Home' },
+                    { id: 'attendance', icon: <UserCheck size={19} />, label: 'Attendance' },
+                    { id: 'marks', icon: <Award size={19} />, label: 'Marks' },
+                    { id: 'placement', icon: <Briefcase size={19} />, label: 'Placements' },
+                    { id: 'simulator', icon: <Gamepad2 size={19} />, label: 'Sim' },
                 ].map(tab => (
                     <button
                         type="button"
@@ -646,6 +663,25 @@ export default function StudentDashboard() {
                         <span>{tab.label}</span>
                     </button>
                 ))}
+
+                {/* Mobile Bottom Bar Update Action */}
+                <button
+                    type="button"
+                    className={`bottom-nav-item bottom-nav-update-btn ${isCooldownActive ? 'cooldown' : ''} ${updateStatus === 'loading' ? 'loading' : ''}`}
+                    onClick={handleUpdate}
+                    disabled={updateStatus === 'loading' || isCooldownActive}
+                    title={isCooldownActive ? `Next update in ${formatTime}` : 'Update Dashboard Data'}
+                    aria-label="Update Dashboard Data"
+                >
+                    {isCooldownActive ? (
+                        <Clock size={19} className="bottom-nav-icon" />
+                    ) : (
+                        <RefreshCw size={19} className={`bottom-nav-icon ${updateStatus === 'loading' ? 'spinning' : ''}`} />
+                    )}
+                    <span>
+                        {updateStatus === 'loading' ? 'Updating' : isCooldownActive ? formatTime : 'Update'}
+                    </span>
+                </button>
             </nav>
 
             {showIOSPrompt && (

@@ -3,68 +3,243 @@
 import React, { useState, useMemo } from "react";
 import {
     Award, TrendingUp, BookOpen, Layers, BarChart2,
-    Calendar, CheckCircle, ChevronRight, ChevronDown, FileText, Sparkles
+    Calendar, CheckCircle, ChevronRight, ChevronDown, FileText, Sparkles,
+    SlidersHorizontal
 } from "lucide-react";
 import {
     Tooltip, ResponsiveContainer,
-    BarChart, Bar, XAxis, YAxis, CartesianGrid, LabelList
+    BarChart, Bar, XAxis, YAxis, CartesianGrid, LabelList, ReferenceDot
 } from "recharts";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import "@/styles/Marks.css";
 
+/**
+ * Metric types that can be selected in the graph dropdown
+ */
+export type MetricType = 'total' | 'T1' | 'T2' | 'T3' | 'AQ1' | 'AQ2' | 'AQ3';
+
+export interface MetricOption {
+    value: MetricType;
+    label: string;
+    shortLabel: string;
+    maxMarks: number;
+}
+
+export const METRIC_OPTIONS: MetricOption[] = [
+    { value: 'total', label: 'Total (50 Marks)', shortLabel: 'Total CIE', maxMarks: 50 },
+    { value: 'T1', label: 'Internal Test 1 (T1 - 30 Marks)', shortLabel: 'Test 1', maxMarks: 30 },
+    { value: 'T2', label: 'Internal Test 2 (T2 - 30 Marks)', shortLabel: 'Test 2', maxMarks: 30 },
+    { value: 'T3', label: 'Internal Test 3 (T3 - 30 Marks)', shortLabel: 'Test 3', maxMarks: 30 },
+    { value: 'AQ1', label: 'Activity / Quiz 1 (AQ1 - 10 Marks)', shortLabel: 'A/Q 1', maxMarks: 10 },
+    { value: 'AQ2', label: 'Activity / Quiz 2 (AQ2 - 10 Marks)', shortLabel: 'A/Q 2', maxMarks: 10 },
+    { value: 'AQ3', label: 'Activity / Quiz 3 (AQ3 - 10 Marks)', shortLabel: 'A/Q 3', maxMarks: 10 },
+];
+
+/**
+ * Extracts student score and class average for a specific assessment metric.
+ */
+export const getMetricData = (subj: any, metric: MetricType) => {
+    const getScore = (type: string) => subj.assessments?.find((a: any) => a.type === type);
+    const t1 = getScore('T1');
+    const t2 = getScore('T2');
+    const t3 = getScore('T3');
+    const aq1 = getScore('AQ1');
+    const aq2 = getScore('AQ2');
+    const aq3 = getScore('AQ3');
+
+    if (metric === 'total') {
+        const valT1 = (t1 && typeof t1.obtained_marks === 'number' && t1.obtained_marks > 0) ? t1.obtained_marks : 0;
+        const valT2 = (t2 && typeof t2.obtained_marks === 'number' && t2.obtained_marks > 0) ? t2.obtained_marks : 0;
+        const valT3 = (t3 && typeof t3.obtained_marks === 'number' && t3.obtained_marks > 0) ? t3.obtained_marks : 0;
+        const valAq1 = (aq1 && typeof aq1.obtained_marks === 'number' && aq1.obtained_marks > 0) ? aq1.obtained_marks : 0;
+        const valAq2 = (aq2 && typeof aq2.obtained_marks === 'number' && aq2.obtained_marks > 0) ? aq2.obtained_marks : 0;
+
+        const validTests = [valT1, valT2, valT3].filter(v => v > 0);
+        let marks: number | null = null;
+        if (validTests.length > 0) {
+            let testAvg = 0;
+            if (validTests.length === 3) {
+                testAvg = Math.round((valT1 + valT2 + valT3) / 3);
+            } else if (validTests.length === 2) {
+                testAvg = Math.round((validTests[0] + validTests[1]) / 2);
+            } else {
+                testAvg = validTests[0];
+            }
+            marks = Math.min(50, Math.round(testAvg + valAq1 + valAq2));
+        } else if (typeof subj.marks === 'number' && subj.marks > 0) {
+            marks = Math.round(subj.marks);
+        }
+
+        // Calculate Total Class Average (out of 50):
+        const valT1Class = (t1 && typeof t1.class_average === 'number' && t1.class_average > 0) ? t1.class_average : 0;
+        const valT2Class = (t2 && typeof t2.class_average === 'number' && t2.class_average > 0) ? t2.class_average : 0;
+        const valT3Class = (t3 && typeof t3.class_average === 'number' && t3.class_average > 0) ? t3.class_average : 0;
+        const valAq1Class = (aq1 && typeof aq1.class_average === 'number' && aq1.class_average > 0) ? aq1.class_average : 0;
+        const valAq2Class = (aq2 && typeof aq2.class_average === 'number' && aq2.class_average > 0) ? aq2.class_average : 0;
+
+        const validClassAvgs = [valT1Class, valT2Class, valT3Class].filter(v => v > 0);
+        let classAvg: number | null = null;
+        if (validClassAvgs.length > 0) {
+            let testClassComponent = 0;
+            if (validClassAvgs.length === 3) {
+                testClassComponent = (validClassAvgs[0] + validClassAvgs[1] + validClassAvgs[2]) / 3;
+            } else if (validClassAvgs.length === 2) {
+                testClassComponent = (validClassAvgs[0] + validClassAvgs[1]) / 2;
+            } else {
+                testClassComponent = validClassAvgs[0];
+            }
+            classAvg = Math.min(50, Math.round((testClassComponent + valAq1Class + valAq2Class) * 10) / 10);
+        } else if (typeof subj.class_average === 'number' && subj.class_average > 0) {
+            classAvg = Math.round(subj.class_average * 10) / 10;
+        }
+
+        return {
+            marks,
+            classAvg,
+            maxMarks: 50,
+            hasScore: marks !== null
+        };
+    }
+
+    const targetAssessment = metric === 'T1' ? t1
+        : metric === 'T2' ? t2
+        : metric === 'T3' ? t3
+        : metric === 'AQ1' ? aq1
+        : metric === 'AQ2' ? aq2
+        : aq3;
+
+    const defaultMax = metric.startsWith('T') ? 30 : 10;
+    const maxMarks = targetAssessment?.max_marks || defaultMax;
+
+    let marks: number | null = null;
+    if (targetAssessment && typeof targetAssessment.obtained_marks === 'number') {
+        marks = targetAssessment.obtained_marks;
+    }
+
+    let classAvg: number | null = null;
+    if (targetAssessment && typeof targetAssessment.class_average === 'number' && targetAssessment.class_average > 0) {
+        classAvg = Math.round(targetAssessment.class_average * 10) / 10;
+    }
+
+    return {
+        marks,
+        classAvg,
+        maxMarks,
+        hasScore: marks !== null
+    };
+};
+
+/**
+ * Extracts acronym / short form from a subject name.
+ * Example: "Human Resource Management" -> "HRM"
+ *          "Distributed Computing" -> "DC"
+ */
+export const getSubjectShortName = (name?: string, fallbackCode?: string): string => {
+    if (!name || typeof name !== 'string' || !name.trim()) {
+        return fallbackCode || '';
+    }
+    const cleaned = name.replace(/[()[\]{}:;&/\\,-]/g, ' ').trim();
+    const words = cleaned.split(/\s+/).filter(Boolean);
+    const stopWords = new Set(['and', 'of', 'in', 'to', 'for', 'the', 'a', 'an', 'on', 'with']);
+    const filteredWords = words.length > 1 ? words.filter(w => !stopWords.has(w.toLowerCase())) : words;
+    const targetWords = filteredWords.length > 0 ? filteredWords : words;
+    const acronym = targetWords.map(w => w[0]?.toUpperCase() || '').join('');
+    return acronym || fallbackCode || '';
+};
+
 const MarksTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
         const data = payload[0].payload;
-        const marks = typeof data.marks === 'number' ? data.marks : 0;
-        const pct = Math.round((marks / 50) * 100);
+        const marks = typeof data.rawMarks === 'number' ? data.rawMarks : data.marks;
+        const maxMarks = data.maxMarks || 50;
+        const hasScore = data.hasScore && typeof marks === 'number';
+        const classAvg = typeof data.classAvg === 'number' ? data.classAvg : null;
+
         return (
-            <div className="custom-chart-tooltip" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', minWidth: '190px' }}>
+            <div className="custom-chart-tooltip" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', minWidth: '195px' }}>
                 <p className="tooltip-title">{data.name}</p>
                 <div className="tooltip-divider"></div>
                 <div className="tooltip-row">
                     <span className="tooltip-label">Code</span>
                     <span className="tooltip-value">{data.code}</span>
                 </div>
+                {data.shortName && (
+                    <div className="tooltip-row">
+                        <span className="tooltip-label">Short Name</span>
+                        <span className="tooltip-value" style={{ color: 'var(--accent-primary)', fontWeight: 700 }}>{data.shortName}</span>
+                    </div>
+                )}
+                {data.metricLabel && (
+                    <div className="tooltip-row">
+                        <span className="tooltip-label">Assessment</span>
+                        <span className="tooltip-value" style={{ color: 'var(--text-secondary)' }}>{data.metricLabel}</span>
+                    </div>
+                )}
                 <div className="tooltip-row">
-                    <span className="tooltip-label">Internal Marks</span>
-                    <span className="tooltip-value" style={{ color: 'var(--accent-primary)', fontWeight: 700 }}>{marks} / 50</span>
-                </div>
-                <div className="tooltip-row">
-                    <span className="tooltip-label">Percentage</span>
-                    <span className="tooltip-value" style={{ 
-                        color: pct >= 80 ? '#10b981' : pct >= 60 ? 'var(--accent-primary, #00ADB5)' : '#f59e0b', 
-                        fontWeight: 700 
-                    }}>
-                        {pct}%
+                    <span className="tooltip-label">Your Score</span>
+                    <span className="tooltip-value" style={{ color: 'var(--accent-primary)', fontWeight: 700 }}>
+                        {hasScore ? `${marks} / ${maxMarks}` : '— (Not Recorded)'}
                     </span>
                 </div>
+                {classAvg !== null && (
+                    <div className="tooltip-row">
+                        <span className="tooltip-label">Class Average</span>
+                        <span className="tooltip-value" style={{ color: '#f59e0b', fontWeight: 700 }}>{classAvg} / {maxMarks}</span>
+                    </div>
+                )}
             </div>
         );
     }
     return null;
 };
 
+const renderCIEBarLabel = (props: any) => {
+    const { x, y, width, value } = props;
+    if (typeof value !== 'number' || isNaN(value) || value <= 0) return null;
+    return (
+        <text 
+            x={Number(x) + Number(width) / 2} 
+            y={Number(y) - 8} 
+            fill="var(--text-primary, #F8FAFC)" 
+            textAnchor="middle" 
+            fontSize="11" 
+            fontWeight="700"
+            className="cie-chart-bar-label"
+        >
+            {value}
+        </text>
+    );
+};
+
 const CIEBarChart = React.memo(({ 
     data, 
+    maxMarks = 50,
+    metric = 'total',
     onSelectSubject 
 }: { 
     data: any[]; 
+    maxMarks?: number;
+    metric?: string;
     onSelectSubject?: (subj: any) => void 
 }) => {
+    const yDomain: [number, number] = maxMarks === 10 ? [0, 12] : maxMarks === 30 ? [0, 35] : [0, 55];
+    const yTicks = maxMarks === 10 ? [0, 2, 4, 6, 8, 10] : maxMarks === 30 ? [0, 10, 20, 30] : [0, 10, 20, 30, 40, 50];
+
     return (
         <ResponsiveContainer width="100%" height={380}>
-            <BarChart data={data} margin={{ top: 28, right: 10, left: -15, bottom: 25 }}>
+            <BarChart data={data} margin={{ top: 28, right: 28, left: -15, bottom: 25 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" vertical={false} />
                 <XAxis 
-                    dataKey="code" 
+                    dataKey="shortName" 
                     stroke="var(--text-muted)" 
-                    style={{ fontSize: '11px', fontWeight: 600 }} 
+                    style={{ fontSize: '11px', fontWeight: 700 }} 
                     axisLine={false} 
                     tickLine={false} 
+                    interval={0}
                 />
                 <YAxis 
-                    domain={[0, 55]} 
-                    ticks={[0, 10, 20, 30, 40, 50]} 
+                    domain={yDomain} 
+                    ticks={yTicks} 
                     stroke="var(--text-muted)" 
                     style={{ fontSize: '12px' }} 
                     axisLine={false} 
@@ -83,27 +258,77 @@ const CIEBarChart = React.memo(({
                     <LabelList 
                         dataKey="marks" 
                         position="top" 
-                        content={(props: any) => {
-                            const { x, y, width, value } = props;
-                            if (typeof value !== 'number' || isNaN(value)) return null;
-                            return (
-                                <g>
-                                    <text 
-                                        x={Number(x) + Number(width) / 2} 
-                                        y={Number(y) - 8} 
-                                        fill="var(--text-primary, #F8FAFC)" 
-                                        textAnchor="middle" 
-                                        fontSize="11" 
-                                        fontWeight="700"
-                                        className="cie-chart-bar-label"
-                                    >
-                                        {value}
-                                    </text>
-                                </g>
-                            );
-                        }} 
+                        content={renderCIEBarLabel}
                     />
                 </Bar>
+
+                {/* Class Average Horizontal Benchmark Lines & Value Labels */}
+                {data.map((item, idx) => {
+                    if (typeof item.classAvg !== 'number' || isNaN(item.classAvg) || item.classAvg <= 0) {
+                        return null;
+                    }
+                    return (
+                        <ReferenceDot
+                            key={`avg-dot-${item.code || item.shortName || idx}`}
+                            x={item.shortName}
+                            y={item.classAvg}
+                            ifOverflow="visible"
+                            shape={(dotProps: any) => {
+                                const cx = dotProps.cx;
+                                const cy = dotProps.cy;
+                                if (typeof cx !== 'number' || typeof cy !== 'number' || isNaN(cx) || isNaN(cy)) {
+                                    return <g />;
+                                }
+                                const lineWidth = 34;
+                                return (
+                                    <g className="cie-chart-avg-marker" key={`avg-${item.shortName}`}>
+                                        {/* Background contrast shadow */}
+                                        <line
+                                            x1={cx - lineWidth / 2}
+                                            y1={cy}
+                                            x2={cx + lineWidth / 2}
+                                            y2={cy}
+                                            stroke="rgba(0, 0, 0, 0.65)"
+                                            strokeWidth={5}
+                                            strokeLinecap="round"
+                                        />
+                                        {/* Horizontal class average line */}
+                                        <line
+                                            x1={cx - lineWidth / 2}
+                                            y1={cy}
+                                            x2={cx + lineWidth / 2}
+                                            y2={cy}
+                                            stroke="#f59e0b"
+                                            strokeWidth={2.5}
+                                            strokeLinecap="round"
+                                        />
+                                        {/* Central indicator dot */}
+                                        <circle
+                                            cx={cx}
+                                            cy={cy}
+                                            r={2.5}
+                                            fill="#ffffff"
+                                            stroke="#f59e0b"
+                                            strokeWidth={1.5}
+                                        />
+                                        {/* Class average number */}
+                                        <text
+                                            x={cx + lineWidth / 2 + 4}
+                                            y={cy + 3.5}
+                                            fill="#f59e0b"
+                                            fontSize="10"
+                                            fontWeight="800"
+                                            textAnchor="start"
+                                            className="cie-chart-avg-text"
+                                        >
+                                            {item.classAvg}
+                                        </text>
+                                    </g>
+                                );
+                            }}
+                        />
+                    );
+                })}
             </BarChart>
         </ResponsiveContainer>
     );
@@ -136,6 +361,7 @@ const MarksSection: React.FC<MarksSectionProps> = ({
     onSelectSubject
 }) => {
     const [subTab, setSubTab] = useState<"cie" | "see">("cie");
+    const [selectedMetric, setSelectedMetric] = useState<MetricType>('total');
     const [selectedHistoryIdx, setSelectedHistoryIdx] = useState<number>(0);
     const [expandedSubject, setExpandedSubject] = useState<string | null>(null);
 
@@ -146,48 +372,41 @@ const MarksSection: React.FC<MarksSectionProps> = ({
     // Reversed history (most recent first)
     const reversedHistory = useMemo(() => [...examHistory].reverse(), [examHistory]);
 
-    // Compute dynamic CIE chart data based on uploaded assessments
+    // Check if any subject has AQ3
+    const hasAq3 = useMemo(() => {
+        return currentSem.some((s: any) => s.assessments?.some((a: any) => a.type === 'AQ3'));
+    }, [currentSem]);
+
+    // Filter available metric options
+    const availableMetricOptions = useMemo(() => {
+        return METRIC_OPTIONS.filter(opt => opt.value !== 'AQ3' || hasAq3);
+    }, [hasAq3]);
+
+    const currentOption = useMemo(() => {
+        return availableMetricOptions.find(o => o.value === selectedMetric) || availableMetricOptions[0];
+    }, [availableMetricOptions, selectedMetric]);
+
+    // Compute dynamic CIE chart data based on selected metric (Total, T1, T2, T3, AQ1, AQ2, AQ3)
     const cieChartData = useMemo(() => {
         return currentSem.map((subj) => {
-            const getScore = (type: string) => subj.assessments?.find((a: any) => a.type === type);
-            const t1 = getScore('T1');
-            const t2 = getScore('T2');
-            const t3 = getScore('T3');
-            const aq1 = getScore('AQ1');
-            const aq2 = getScore('AQ2');
-
-            const valT1 = (t1 && typeof t1.obtained_marks === 'number' && t1.obtained_marks > 0) ? t1.obtained_marks : 0;
-            const valT2 = (t2 && typeof t2.obtained_marks === 'number' && t2.obtained_marks > 0) ? t2.obtained_marks : 0;
-            const valT3 = (t3 && typeof t3.obtained_marks === 'number' && t3.obtained_marks > 0) ? t3.obtained_marks : 0;
-            const valAq1 = (aq1 && typeof aq1.obtained_marks === 'number' && aq1.obtained_marks > 0) ? aq1.obtained_marks : 0;
-            const valAq2 = (aq2 && typeof aq2.obtained_marks === 'number' && aq2.obtained_marks > 0) ? aq2.obtained_marks : 0;
-
-            const validTests = [valT1, valT2, valT3].filter(v => v > 0);
-            let marks = 0;
-
-            if (validTests.length > 0) {
-                let testAvg = 0;
-                if (validTests.length === 3) {
-                    testAvg = Math.round((valT1 + valT2 + valT3) / 3);
-                } else if (validTests.length === 2) {
-                    testAvg = Math.round((validTests[0] + validTests[1]) / 2);
-                } else {
-                    testAvg = validTests[0]; // If only 1 test uploaded, directly take that marks
-                }
-                marks = Math.min(50, Math.round(testAvg + valAq1 + valAq2));
-            } else if (typeof subj.marks === 'number' && subj.marks > 0) {
-                marks = Math.round(subj.marks);
-            }
+            const { marks, classAvg, maxMarks, hasScore } = getMetricData(subj, selectedMetric);
+            const shortName = getSubjectShortName(subj.name, subj.code);
 
             return {
                 ...subj,
-                marks
+                shortName,
+                marks: hasScore && marks !== null ? marks : 0,
+                rawMarks: marks,
+                classAvg,
+                maxMarks,
+                hasScore,
+                metricLabel: currentOption.label
             };
         });
-    }, [currentSem]);
+    }, [currentSem, selectedMetric, currentOption]);
 
-    const hasMarksData = cieChartData.length > 0 && cieChartData.some((s: any) => 
-        (s.marks && s.marks > 0) || 
+    const hasMarksData = currentSem.length > 0 && currentSem.some((s: any) => 
+        (typeof s.marks === 'number' && s.marks > 0) || 
         (s.assessments && s.assessments.length > 0)
     );
 
@@ -225,15 +444,61 @@ const MarksSection: React.FC<MarksSectionProps> = ({
                     <>
                         {/* CIE Bar Chart at the Top */}
                         <div className="chart-card">
-                            <div className="chart-header">
-                                <div>
-                                    <h3 className="chart-title">Internal Marks (CIE)</h3>
-                                    <p className="chart-subtitle">Subject-wise CIE scores out of 50</p>
+                            <div className="marks-chart-header">
+                                <div className="marks-chart-header-left">
+                                    <h3 className="chart-title">
+                                        {selectedMetric === 'total' 
+                                            ? 'Internal Marks (CIE)' 
+                                            : `${currentOption.shortLabel} Scores`}
+                                    </h3>
+                                    <p className="chart-subtitle">
+                                        {selectedMetric === 'total'
+                                            ? 'Subject-wise total CIE scores out of 50 vs class average benchmark'
+                                            : `Subject-wise scores out of ${currentOption.maxMarks} vs class average benchmark`}
+                                    </p>
+                                </div>
+
+                                <div className="marks-chart-controls">
+                                    {/* Visual Chart Legend */}
+                                    <div className="marks-chart-legend">
+                                        <div className="marks-legend-pill score">
+                                            <span className="legend-indicator-bar" />
+                                            <span>Your Score</span>
+                                        </div>
+                                        <div className="marks-legend-pill avg">
+                                            <span className="legend-indicator-line" />
+                                            <span>Class Avg</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Assessment Selector Dropdown */}
+                                    <div className="marks-metric-select-wrap">
+                                        <SlidersHorizontal size={13} className="marks-select-icon" />
+                                        <select
+                                            id="cie-metric-select"
+                                            value={selectedMetric}
+                                            onChange={(e) => setSelectedMetric(e.target.value as MetricType)}
+                                            className="marks-metric-select"
+                                            aria-label="Select CIE Assessment"
+                                        >
+                                            {availableMetricOptions.map((opt) => (
+                                                <option key={opt.value} value={opt.value}>
+                                                    {opt.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <ChevronDown size={14} className="marks-select-chevron" />
+                                    </div>
                                 </div>
                             </div>
                             <div className="chart-body marks-chart-body">
                                 {hasMarksData ? (
-                                    <CIEBarChart data={cieChartData} onSelectSubject={onSelectSubject} />
+                                    <CIEBarChart 
+                                        data={cieChartData} 
+                                        maxMarks={currentOption.maxMarks}
+                                        metric={selectedMetric}
+                                        onSelectSubject={onSelectSubject} 
+                                    />
                                 ) : (
                                     <div className="dashboard-empty-state">
                                         <div className="empty-state-icon-wrap purple">
