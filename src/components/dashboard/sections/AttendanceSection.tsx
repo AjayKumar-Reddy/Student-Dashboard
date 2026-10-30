@@ -13,6 +13,7 @@ import {
     ResponsiveContainer
 } from "recharts";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
+import { getSubjectShortName } from "./MarksSection";
 import "@/styles/Attendance.css";
 
 interface AttendanceSectionProps {
@@ -31,13 +32,19 @@ const AttendanceTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
         const data = payload[0].payload;
         return (
-            <div className="custom-chart-tooltip" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}>
+            <div className="custom-chart-tooltip" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', minWidth: '180px' }}>
                 <p className="tooltip-title">{data.name}</p>
                 <div className="tooltip-divider"></div>
                 <div className="tooltip-row">
                     <span className="tooltip-label">Code</span>
                     <span className="tooltip-value">{data.code}</span>
                 </div>
+                {data.shortName && (
+                    <div className="tooltip-row">
+                        <span className="tooltip-label">Short Name</span>
+                        <span className="tooltip-value" style={{ color: 'var(--accent-primary)', fontWeight: 700 }}>{data.shortName}</span>
+                    </div>
+                )}
                 <div className="tooltip-row">
                     <span className="tooltip-label">Attendance</span>
                     <span className="tooltip-value" style={{ color: data.fill || 'var(--accent-primary)' }}>{data.attendance}%</span>
@@ -116,9 +123,11 @@ const AttendanceSection: React.FC<AttendanceSectionProps> = ({
     const chartData = useMemo(() => {
         return currentSem.map((s: any, i: number) => {
             const att = Math.round(Number(s.attendance) || 0);
+            const shortName = getSubjectShortName(s.name, s.code);
             return {
                 ...s,
                 name: s.name || s.code || `Subject ${i + 1}`,
+                shortName,
                 code: s.code || '',
                 attendance: att,
                 value: 1, // equal angular sectors for pie
@@ -133,9 +142,33 @@ const AttendanceSection: React.FC<AttendanceSectionProps> = ({
         const radius = innerRadius + (outerRadius - innerRadius) * 0.52;
         const x = cx + radius * Math.cos(-midAngle * RADIAN);
         const y = cy + radius * Math.sin(-midAngle * RADIAN);
-        const att = chartData[index]?.attendance;
+        const item = chartData[index];
+        const att = item?.attendance;
 
         if (att === undefined || att === null) return null;
+
+        if (isMobile && item?.shortName) {
+            return (
+                <text
+                    x={x}
+                    y={y}
+                    fill="#ffffff"
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    style={{
+                        textShadow: '0 1px 4px rgba(0, 0, 0, 0.95), 0 0 3px rgba(0, 0, 0, 0.9)',
+                        pointerEvents: 'none'
+                    }}
+                >
+                    <tspan x={x} dy="-0.35em" fontSize={10} fontWeight={800} letterSpacing="-0.2px">
+                        {item.shortName}
+                    </tspan>
+                    <tspan x={x} dy="1.15em" fontSize={9.5} fontWeight={700} fill="rgba(255, 255, 255, 0.95)">
+                        {att}%
+                    </tspan>
+                </text>
+            );
+        }
 
         return (
             <text
@@ -155,7 +188,7 @@ const AttendanceSection: React.FC<AttendanceSectionProps> = ({
                 {att}%
             </text>
         );
-    }, [chartData]);
+    }, [chartData, isMobile]);
 
     return (
         <div className="tab-content">
@@ -289,7 +322,10 @@ const AttendanceSection: React.FC<AttendanceSectionProps> = ({
                                                         style={{ backgroundColor: s.fill }}
                                                     />
                                                     <div className="legend-text-col">
-                                                        <span className="legend-label-custom">{s.name}</span>
+                                                        <span className="legend-label-custom">
+                                                            <span className="legend-label-desktop">{s.name}</span>
+                                                            <span className="legend-label-mobile">{s.shortName || s.name}</span>
+                                                        </span>
                                                         {s.code && <span className="legend-code-custom">{s.code}</span>}
                                                     </div>
                                                 </div>

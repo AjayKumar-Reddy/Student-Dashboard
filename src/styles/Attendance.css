@@ -523,6 +523,14 @@
     text-overflow: ellipsis;
 }
 
+.legend-label-desktop {
+    display: inline;
+}
+
+.legend-label-mobile {
+    display: none;
+}
+
 .legend-code-custom {
     font-size: 10px;
     font-weight: 600;
@@ -596,6 +604,16 @@
         font-size: 11px !important;
         font-weight: 500;
         line-height: 1.2;
+    }
+
+    .legend-label-desktop {
+        display: none;
+    }
+
+    .legend-label-mobile {
+        display: inline;
+        font-weight: 600;
+        letter-spacing: 0.2px;
     }
 
     .legend-code-custom {

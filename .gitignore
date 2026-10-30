@@ -45,3 +45,9 @@ student_1ms24is400.json
 *.student.json
 scratch_timetable.html
 scratch_*.html
+
+# AI agent skills & configs
+.agents/
+.claude/
+.windsurf/
+
