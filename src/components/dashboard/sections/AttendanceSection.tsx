@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Calculator, Calendar, CalendarClock } from "lucide-react";
 import {
     RadialBarChart,
@@ -127,8 +127,8 @@ const AttendanceSection: React.FC<AttendanceSectionProps> = ({
         });
     }, [currentSem]);
 
-    // Custom Pie Slice Label to render percentage directly on each slice
-    const renderCustomPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, index }: any) => {
+    // Custom Pie Slice Label to render percentage directly on each slice (memoized)
+    const renderCustomPieLabel = useCallback(({ cx, cy, midAngle, innerRadius, outerRadius, index }: any) => {
         const RADIAN = Math.PI / 180;
         const radius = innerRadius + (outerRadius - innerRadius) * 0.52;
         const x = cx + radius * Math.cos(-midAngle * RADIAN);
@@ -155,7 +155,7 @@ const AttendanceSection: React.FC<AttendanceSectionProps> = ({
                 {att}%
             </text>
         );
-    };
+    }, [chartData]);
 
     return (
         <div className="tab-content">
@@ -208,10 +208,7 @@ const AttendanceSection: React.FC<AttendanceSectionProps> = ({
                                                     label={renderCustomPieLabel}
                                                     labelLine={false}
                                                     onClick={(d: any) => onSelectSubject?.(d.payload)}
-                                                    isAnimationActive={true}
-                                                    animationDuration={450}
-                                                    animationEasing="ease-out"
-                                                    animationBegin={0}
+                                                    isAnimationActive={false}
                                                 >
                                                     {chartData.map((entry, index) => (
                                                         <Cell 
@@ -249,10 +246,7 @@ const AttendanceSection: React.FC<AttendanceSectionProps> = ({
                                                     dataKey="attendance"
                                                     cornerRadius={10}
                                                     angleAxisId={0}
-                                                    isAnimationActive={true}
-                                                    animationDuration={500}
-                                                    animationEasing="ease-out"
-                                                    animationBegin={0}
+                                                    isAnimationActive={false}
                                                     label={{
                                                         position: 'insideStart',
                                                         fill: '#ffffff',
