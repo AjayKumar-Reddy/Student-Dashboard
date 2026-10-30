@@ -74,22 +74,39 @@ class DataNormalizer {
     }
 
     static calculateTotalMarks(assessments: any[]): number {
+        // If final CIE is explicitly present and valid
+        const finalCie = assessments.find(x => x.type === "FINAL CIE");
+        if (finalCie && this.isValidNumeric(finalCie.obtained_marks) && parseFloat(finalCie.obtained_marks) > 0) {
+            return parseFloat(finalCie.obtained_marks);
+        }
+
         const getVal = (tType: string): number => {
             const a = assessments.find(x => x.type === tType);
-            if (a) {
+            if (a && this.isValidNumeric(a.obtained_marks)) {
                 const val = parseFloat(a.obtained_marks);
-                return !Number.isNaN(val) ? val : 0.0;
+                return (!Number.isNaN(val) && val > 0) ? val : 0;
             }
-            return 0.0;
+            return 0;
         };
 
         const valT1 = getVal("T1");
         const valT2 = getVal("T2");
+        const valT3 = getVal("T3");
         const valAq1 = getVal("AQ1");
         const valAq2 = getVal("AQ2");
 
-        const testAvg = (valT1 > 0 && valT2 > 0) ? Math.round((valT1 + valT2) / 2) : Math.max(valT1, valT2);
-        return testAvg + valAq1 + valAq2;
+        const validTests = [valT1, valT2, valT3].filter(v => v > 0);
+        let testAvg = 0;
+        if (validTests.length === 3) {
+            testAvg = Math.round((valT1 + valT2 + valT3) / 3);
+        } else if (validTests.length === 2) {
+            testAvg = Math.round((validTests[0] + validTests[1]) / 2);
+        } else if (validTests.length === 1) {
+            testAvg = validTests[0]; // If 1 test uploaded, directly take that marks
+        }
+
+        const total = Math.round(testAvg + valAq1 + valAq2);
+        return Math.min(50, total);
     }
 
     static normalizeSubjectEntry(entry: any) {
@@ -241,6 +258,38 @@ const parsePlacementEvents = (html: string): any[] => {
     const $ = cheerio.load(html);
     const events: any[] = [];
 
+    const extractDatePattern = (text: string, pattern: RegExp): string | null => {
+        const match = text.match(pattern);
+        if (!match) return null;
+        const rawDate = match[1].trim();
+        const dateMatch = rawDate.match(/\b\d{1,2}(?:st|nd|rd|th)?[-/\s]+(?:[A-Za-z]{3,9}|\d{1,2})[-/\s]+\d{2,4}\b|\b\d{4}[-/]\d{1,2}[-/]\d{1,2}\b/);
+        if (dateMatch) {
+            const timeMatch = rawDate.slice(rawDate.indexOf(dateMatch[0]) + dateMatch[0].length).match(/^\s+(\d{1,2}:\d{2}(?:\s*[AP]M)?)/i);
+            return timeMatch ? `${dateMatch[0]} ${timeMatch[1].trim()}` : dateMatch[0];
+        }
+        return rawDate.split(/(?:\s{2,}|,|\.|\()/)[0].trim() || null;
+    };
+
+    const extractCtcField = (text: string): string | null => {
+        const ctcMatch = text.match(/(?:CTC[:\s]+)?₹?\s*\d+(?:\.\d+)?\s*(?:LPA|Lakhs|L)\b/i);
+        if (!ctcMatch) return null;
+        const ctc = ctcMatch[0].replace(/CTC[:\s]+/i, '').trim();
+        return ctc.startsWith('₹') ? ctc : `₹${ctc}`;
+    };
+
+    const extractStatusField = (text: string): string => {
+        const statusMatch = text.match(/(?:Status)[:\s]+([a-z\s]+)/i);
+        if (statusMatch) return statusMatch[1].trim();
+        if (/under\s*progress/i.test(text)) return "Under Progress";
+        if (/registration\s*closed/i.test(text)) return "Registration Closed";
+        if (/registered/i.test(text)) return "Registered";
+        if (/selected/i.test(text)) return "Selected";
+        if (/rejected/i.test(text)) return "Rejected";
+        if (/eligible/i.test(text)) return "Eligible";
+        if (/applied/i.test(text)) return "Applied";
+        return "Open";
+    };
+
     // 1. Look for lists (standard for Contineo placement sections)
     const listItems = $('ul.cn-elig_list li, .cn-elig_list li');
     if (listItems.length > 0) {
@@ -253,7 +302,10 @@ const parsePlacementEvents = (html: string): any[] => {
                 return;
             }
             
-            const lines = $li.text().split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            const rawText = $li.text();
+            const textContent = rawText.replace(/\s+/g, ' ').trim();
+            const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            
             let title = $li.find('.elig_name').text().trim() || $li.find('h4').text().trim();
             if (!title && lines.length > 0) {
                 if (lines[0].length === 1 && lines.length > 1) {
@@ -263,22 +315,52 @@ const parsePlacementEvents = (html: string): any[] => {
                 }
             }
             title = title || "Placement Opportunity";
-            const actionLink = $li.find('a').attr('href') || '';
+            const actionLink = $li.find('a[href]').attr('href') || '';
             
-            // Collect other descriptive fields
+            // Extract Type
+            const typeLook = textContent.match(/\b(Service|Product|Core|Direct|Internship)\b/i);
+            const type = typeLook ? typeLook[0] : "Placement Event";
+
+            // Extract explicit dates directly from the entire card content
+            const appliedDate = extractDatePattern(rawText, /(?:Applied\s+(?:On|Date)|Applied|Apply\s+Before)[:\s]+([^\n\r,;()]+)/i);
+            const eventDate = extractDatePattern(rawText, /(?:Event\s+Date|Date\s+of\s+Event|Drive\s+Date|Interview\s+Date)[:\s]+([^\n\r,;()]+)/i);
+            const ctc = extractCtcField(textContent);
+            const status = extractStatusField(textContent);
+
+            // Collect other descriptive fields without redundant ancestor duplicates and without dropping dates
             const details: string[] = [];
-            $li.find('p, span, div').each((_, el) => {
-                const text = $(el).text().trim();
-                // Exclude title text, single characters (logos), and file upload helpers
-                if (text && text !== title && text.length > 1 && !text.includes("Choose file") && !text.includes("Upload")) {
+            $li.find('p, span, div, td, li').each((_, el) => {
+                const $el = $(el);
+                // Skip outer container elements that contain nested block children to prevent duplicate massive chunks
+                if ($el.children('div, p, table, ul').length > 0) return;
+                const text = $el.text().trim();
+                if (text && text !== title && text.length > 1 && 
+                    !text.includes("Choose file") && !text.includes("Upload") &&
+                    text !== "V" && text !== "H" && text !== "O") {
                     details.push(text);
                 }
             });
-            
+
+            // Ensure key lines with date and timeline info are also preserved in details
+            lines.forEach(l => {
+                if (/(?:Apply\s+Before|Applied|Event\s+Date|LPA|Closed|Registered|Progress)/i.test(l)) {
+                    details.push(l);
+                }
+            });
+
+            const uniqueDetails = Array.from(new Set(details));
+
             events.push({
                 title,
-                details: Array.from(new Set(details)).slice(0, 10), // Unique details
-                actionLink: actionLink ? resolveParentsUrl(actionLink) : ''
+                company: title,
+                type,
+                appliedDate,
+                eventDate,
+                ctc,
+                status,
+                details: uniqueDetails,
+                actionLink: actionLink ? resolveParentsUrl(actionLink) : '',
+                textContent
             });
         });
         
@@ -307,14 +389,27 @@ const parsePlacementEvents = (html: string): any[] => {
                     eventData[header] = $(td).text().trim();
                 });
                 
-                const actionLink = $tr.find('a').attr('href') || '';
-                if (actionLink) {
-                    eventData.actionLink = resolveParentsUrl(actionLink);
-                }
-                
-                if (Object.keys(eventData).length > 0) {
-                    events.push(eventData);
-                }
+                const actionLink = $tr.find('a[href]').attr('href') || '';
+                const tableRowText = $tr.text().replace(/\s+/g, ' ').trim();
+                const title = eventData.Company || eventData.Event || eventData.title || Object.values(eventData)[0] || "Placement Opportunity";
+
+                const appliedDate = eventData['Applied On'] || eventData['Apply Before'] || eventData['Applied Date'] || 
+                                    extractDatePattern(tableRowText, /(?:Applied\s+(?:On|Date)|Applied|Apply\s+Before)[:\s]+([^\n\r,;()]+)/i);
+                const eventDate = eventData['Event Date'] || eventData['Date of Event'] || 
+                                  extractDatePattern(tableRowText, /(?:Event\s+Date|Date\s+of\s+Event|Drive\s+Date|Interview\s+Date)[:\s]+([^\n\r,;()]+)/i);
+
+                events.push({
+                    title,
+                    company: title,
+                    type: eventData.Type || "Placement Event",
+                    appliedDate,
+                    eventDate,
+                    ctc: extractCtcField(tableRowText),
+                    status: extractStatusField(tableRowText),
+                    details: Object.entries(eventData).map(([k, v]) => `${k}: ${v}`),
+                    actionLink: actionLink ? resolveParentsUrl(actionLink) : '',
+                    textContent: tableRowText
+                });
             });
         });
     }

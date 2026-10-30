@@ -43,13 +43,28 @@ export const UpdateButton: React.FC<UpdateButtonProps> = ({
       <div className="btn-content">
         {cooldownActive ? (
           <>
-            <Clock size={18} className="btn-icon" />
-            <span>Next update in {formattedCooldown}</span>
+            <Clock size={16} className="btn-icon" />
+            <div className="btn-text-col">
+              <span className="btn-text-top">Next update</span>
+              <span className="btn-text-bottom">in {formattedCooldown}</span>
+            </div>
           </>
         ) : (
           <>
-            <RefreshCw size={18} className={`btn-icon ${isLoading ? 'spinning' : ''}`} />
-            <span>{isLoading ? 'Updating...' : 'Update Dashboard'}</span>
+            <RefreshCw size={16} className={`btn-icon ${isLoading ? 'spinning' : ''}`} />
+            <div className="btn-text-col">
+              {isLoading ? (
+                <>
+                  <span className="btn-text-top">Updating</span>
+                  <span className="btn-text-bottom">Dashboard...</span>
+                </>
+              ) : (
+                <>
+                  <span className="btn-text-top">Update</span>
+                  <span className="btn-text-bottom">Dashboard</span>
+                </>
+              )}
+            </div>
           </>
         )}
       </div>
