@@ -335,6 +335,84 @@ const CIEBarChart = React.memo(({
 });
 CIEBarChart.displayName = "CIEBarChart";
 
+const getMarkValue = (item?: { obtained_marks?: number } | null): number => {
+    return typeof item?.obtained_marks === 'number' && item.obtained_marks > 0 ? item.obtained_marks : 0;
+};
+
+const getClassAvgValue = (item?: { class_average?: number } | null): number => {
+    return typeof item?.class_average === 'number' && item.class_average > 0 ? item.class_average : 0;
+};
+
+const calculateAverage = (scores: number[]): number => {
+    if (scores.length === 0) return 0;
+    const sum = scores.reduce((total, s) => total + s, 0);
+    return Math.round(sum / scores.length);
+};
+
+const calculateNormalMarks = (tests: number[], valAq1: number, valAq2: number, fallbackMarks?: number): number | null => {
+    if (tests.length > 0) {
+        return Math.min(50, Math.round(calculateAverage(tests) + valAq1 + valAq2));
+    }
+    if (typeof fallbackMarks === 'number' && fallbackMarks > 0) {
+        return Math.round(fallbackMarks);
+    }
+    return null;
+};
+
+const calculateTotalClassAvg = (classTests: number[], valAq1Class: number, valAq2Class: number): number | null => {
+    if (classTests.length === 0) return null;
+    return Math.min(50, Math.round(calculateAverage(classTests) + valAq1Class + valAq2Class));
+};
+
+interface CIEScoreCardProps {
+    title: string;
+    data?: any;
+    max: number;
+    showAvg?: boolean;
+}
+
+const CIEScoreCard: React.FC<CIEScoreCardProps> = ({ title, data, max, showAvg = false }) => {
+    const hasScore = typeof data?.obtained_marks === 'number' && data.obtained_marks > 0;
+    const score = hasScore ? data.obtained_marks : null;
+    const pct = hasScore && score !== null ? Math.round((score / max) * 100) : 0;
+    const hasAvg = typeof data?.class_average === 'number' && data.class_average > 0;
+
+    return (
+        <div className={`cie-score-card ${hasScore ? 'has-data' : 'empty'}`}>
+            <div className="cie-sc-top">
+                <span className="cie-sc-tag">{title}</span>
+                {hasScore ? (
+                    <span className="cie-sc-pct">{pct}%</span>
+                ) : (
+                    <span className="cie-sc-status-muted">Upcoming</span>
+                )}
+            </div>
+            <div className="cie-sc-body">
+                <div className="cie-sc-score-row">
+                    <span className="cie-sc-score-val">{hasScore ? score : '—'}</span>
+                    <span className="cie-sc-score-max">/{max}</span>
+                </div>
+                <div className="cie-sc-meter">
+                    <div 
+                        className="cie-sc-meter-fill" 
+                        style={{ width: `${hasScore ? Math.min(100, pct) : 0}%` }} 
+                    />
+                </div>
+            </div>
+            <div className="cie-sc-footer">
+                {showAvg && hasAvg ? (
+                    <span className="cie-sc-avg">Avg: <strong>{data.class_average}</strong></span>
+                ) : (
+                    <span className="cie-sc-subtext">
+                        {hasScore ? (showAvg ? 'Evaluated' : 'Recorded') : (showAvg ? 'Not recorded' : 'Pending')}
+                    </span>
+                )}
+            </div>
+        </div>
+    );
+};
+CIEScoreCard.displayName = "CIEScoreCard";
+
 interface CIEAccordionItemProps {
     subj: any;
     isExpanded: boolean;
@@ -356,51 +434,11 @@ const CIEAccordionItem = React.memo<CIEAccordionItemProps>(({
     const aq2 = getScore('AQ2');
     const aq3 = getScore('AQ3');
 
-    // 1. Calculate Normal Total Marks (Student's CIE score out of 50):
-    const valT1 = (t1 && typeof t1.obtained_marks === 'number' && t1.obtained_marks > 0) ? t1.obtained_marks : 0;
-    const valT2 = (t2 && typeof t2.obtained_marks === 'number' && t2.obtained_marks > 0) ? t2.obtained_marks : 0;
-    const valT3 = (t3 && typeof t3.obtained_marks === 'number' && t3.obtained_marks > 0) ? t3.obtained_marks : 0;
-    const valAq1 = (aq1 && typeof aq1.obtained_marks === 'number' && aq1.obtained_marks > 0) ? aq1.obtained_marks : 0;
-    const valAq2 = (aq2 && typeof aq2.obtained_marks === 'number' && aq2.obtained_marks > 0) ? aq2.obtained_marks : 0;
+    const validTests = [t1, t2, t3].map(getMarkValue).filter(v => v > 0);
+    const normalMarks = calculateNormalMarks(validTests, getMarkValue(aq1), getMarkValue(aq2), subj.marks);
 
-    const validTests = [valT1, valT2, valT3].filter(v => v > 0);
-    let normalMarks: number | null = null;
-
-    if (validTests.length > 0) {
-        let testAvg = 0;
-        if (validTests.length === 3) {
-            testAvg = Math.round((valT1 + valT2 + valT3) / 3);
-        } else if (validTests.length === 2) {
-            testAvg = Math.round((validTests[0] + validTests[1]) / 2);
-        } else {
-            testAvg = validTests[0];
-        }
-        normalMarks = Math.min(50, Math.round(testAvg + valAq1 + valAq2));
-    } else if (typeof subj.marks === 'number' && subj.marks > 0) {
-        normalMarks = Math.round(subj.marks);
-    }
-
-    // 2. Calculate Total Class Average (out of 50):
-    const valT1Class = (t1 && typeof t1.class_average === 'number' && t1.class_average > 0) ? t1.class_average : 0;
-    const valT2Class = (t2 && typeof t2.class_average === 'number' && t2.class_average > 0) ? t2.class_average : 0;
-    const valT3Class = (t3 && typeof t3.class_average === 'number' && t3.class_average > 0) ? t3.class_average : 0;
-    const valAq1Class = (aq1 && typeof aq1.class_average === 'number' && aq1.class_average > 0) ? aq1.class_average : 0;
-    const valAq2Class = (aq2 && typeof aq2.class_average === 'number' && aq2.class_average > 0) ? aq2.class_average : 0;
-
-    const validClassAvgs = [valT1Class, valT2Class, valT3Class].filter(v => v > 0);
-    let totalClassAvg: number | null = null;
-
-    if (validClassAvgs.length > 0) {
-        let testClassComponent = 0;
-        if (validClassAvgs.length === 3) {
-            testClassComponent = Math.round((validClassAvgs[0] + validClassAvgs[1] + validClassAvgs[2]) / 3);
-        } else if (validClassAvgs.length === 2) {
-            testClassComponent = Math.round((validClassAvgs[0] + validClassAvgs[1]) / 2);
-        } else {
-            testClassComponent = Math.round(validClassAvgs[0]);
-        }
-        totalClassAvg = Math.min(50, Math.round(testClassComponent + valAq1Class + valAq2Class));
-    }
+    const validClassAvgs = [t1, t2, t3].map(getClassAvgValue).filter(v => v > 0);
+    const totalClassAvg = calculateTotalClassAvg(validClassAvgs, getClassAvgValue(aq1), getClassAvgValue(aq2));
 
     const displayMarks = normalMarks !== null ? normalMarks : '—';
     const pct = typeof displayMarks === 'number' ? Math.min(100, Math.max(0, (displayMarks / 50) * 100)) : 0;
@@ -463,47 +501,15 @@ const CIEAccordionItem = React.memo<CIEAccordionItemProps>(({
                             <span className="cie-group-subtitle">Out of 30</span>
                         </div>
                         <div className="cie-cards-grid cie-tests-grid">
-                            {internalTests.map((test) => {
-                                const hasScore = test.data && typeof test.data.obtained_marks === 'number' && test.data.obtained_marks > 0;
-                                const score = hasScore ? test.data.obtained_marks : null;
-                                const testPct = hasScore ? Math.round((score! / test.max) * 100) : 0;
-                                const hasAvg = test.data?.class_average && test.data.class_average > 0;
-                                return (
-                                    <div key={test.id} className={`cie-score-card ${hasScore ? 'has-data' : 'empty'}`}>
-                                        <div className="cie-sc-top">
-                                            <span className="cie-sc-tag">
-                                                {test.title}
-                                            </span>
-                                            {hasScore ? (
-                                                <span className="cie-sc-pct">
-                                                    {testPct}%
-                                                </span>
-                                            ) : (
-                                                <span className="cie-sc-status-muted">Upcoming</span>
-                                            )}
-                                        </div>
-                                        <div className="cie-sc-body">
-                                            <div className="cie-sc-score-row">
-                                                <span className="cie-sc-score-val">{hasScore ? score : '—'}</span>
-                                                <span className="cie-sc-score-max">/{test.max}</span>
-                                            </div>
-                                            <div className="cie-sc-meter">
-                                                <div 
-                                                    className="cie-sc-meter-fill" 
-                                                    style={{ width: `${hasScore ? Math.min(100, testPct) : 0}%` }} 
-                                                />
-                                            </div>
-                                        </div>
-                                        <div className="cie-sc-footer">
-                                            {hasAvg ? (
-                                                <span className="cie-sc-avg">Avg: <strong>{test.data.class_average}</strong></span>
-                                            ) : (
-                                                <span className="cie-sc-subtext">{hasScore ? 'Evaluated' : 'Not recorded'}</span>
-                                            )}
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                            {internalTests.map((test) => (
+                                <CIEScoreCard
+                                    key={test.id}
+                                    title={test.title}
+                                    data={test.data}
+                                    max={test.max}
+                                    showAvg
+                                />
+                            ))}
                         </div>
                     </div>
 
@@ -515,42 +521,14 @@ const CIEAccordionItem = React.memo<CIEAccordionItemProps>(({
                             <span className="cie-group-subtitle">Out of 10</span>
                         </div>
                         <div className="cie-cards-grid cie-aqs-grid">
-                            {internalAqs.map((aq) => {
-                                const hasScore = aq.data && typeof aq.data.obtained_marks === 'number' && aq.data.obtained_marks > 0;
-                                const score = hasScore ? aq.data.obtained_marks : null;
-                                const aqPct = hasScore ? Math.round((score! / aq.max) * 100) : 0;
-                                return (
-                                    <div key={aq.id} className={`cie-score-card ${hasScore ? 'has-data' : 'empty'}`}>
-                                        <div className="cie-sc-top">
-                                            <span className="cie-sc-tag">
-                                                {aq.title}
-                                            </span>
-                                            {hasScore ? (
-                                                <span className="cie-sc-pct">
-                                                    {aqPct}%
-                                                </span>
-                                            ) : (
-                                                <span className="cie-sc-status-muted">Upcoming</span>
-                                            )}
-                                        </div>
-                                        <div className="cie-sc-body">
-                                            <div className="cie-sc-score-row">
-                                                <span className="cie-sc-score-val">{hasScore ? score : '—'}</span>
-                                                <span className="cie-sc-score-max">/{aq.max}</span>
-                                            </div>
-                                            <div className="cie-sc-meter">
-                                                <div 
-                                                    className="cie-sc-meter-fill" 
-                                                    style={{ width: `${hasScore ? Math.min(100, aqPct) : 0}%` }} 
-                                                />
-                                            </div>
-                                        </div>
-                                        <div className="cie-sc-footer">
-                                            <span className="cie-sc-subtext">{hasScore ? 'Recorded' : 'Pending'}</span>
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                            {internalAqs.map((aq) => (
+                                <CIEScoreCard
+                                    key={aq.id}
+                                    title={aq.title}
+                                    data={aq.data}
+                                    max={aq.max}
+                                />
+                            ))}
                         </div>
                     </div>
 
