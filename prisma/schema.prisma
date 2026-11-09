@@ -15,7 +15,8 @@ model Student {
   current_year  Int
   auth_type     String?
   encrypted_pin String?
-  details       Json    // For backward compatibility / performance metrics
+  details       Json      // For backward compatibility / performance metrics
+  last_updated  DateTime?
 
   @@map("students")
 }

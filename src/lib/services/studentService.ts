@@ -22,6 +22,7 @@ export class StudentService {
         auth_type: true,
         encrypted_pin: true,
         details: true,
+        last_updated: true,
       }
     });
 
@@ -45,6 +46,7 @@ export class StudentService {
       auth_type: decryptedAuthType,
       encrypted_pin: encryptedPin,
       details: decryptedDetails,
+      last_updated: student.last_updated ? student.last_updated.toISOString() : (decryptedDetails?.last_updated || null),
     };
   }
 
@@ -76,6 +78,7 @@ export class StudentService {
     };
 
     const encryptedDetails = encryptJSON(detailsPayload);
+    const lastUpdatedDate = studentData.last_updated ? new Date(studentData.last_updated) : new Date();
 
     const updateData: any = {
       name: studentData.name || undefined,
@@ -86,6 +89,7 @@ export class StudentService {
       encrypted_pin: encryptedPin,
       details: encryptedDetails,
       current_year: studentData.current_year || 0,
+      last_updated: lastUpdatedDate,
     };
 
     const createData: any = {
@@ -98,6 +102,7 @@ export class StudentService {
       encrypted_pin: encryptedPin,
       details: encryptedDetails,
       current_year: studentData.current_year || 0,
+      last_updated: lastUpdatedDate,
     };
 
     return { updateData, createData };
@@ -115,8 +120,10 @@ export class StudentService {
         console.warn(`[StudentService] Fallback for cached PrismaClient...`);
         delete updateData.auth_type;
         delete updateData.encrypted_pin;
+        delete updateData.last_updated;
         delete createData.auth_type;
         delete createData.encrypted_pin;
+        delete createData.last_updated;
         await prisma.student.upsert({
           where: { usn: normalizedUsn },
           update: updateData,
