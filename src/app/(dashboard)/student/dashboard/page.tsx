@@ -76,12 +76,14 @@ export default function StudentDashboard() {
     const [predictedGrades, setPredictedGrades] = useState<Record<string, string>>({});
     const [simulatedCredits, setSimulatedCredits] = useState<Record<string, number>>({});
     const [updateStatus, setUpdateStatus] = useState<'loading' | 'success' | 'error' | null>(null);
+    const [portalError, setPortalError] = useState<string | null>(null);
     const [showMobileProfileMenu, setShowMobileProfileMenu] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [confirmUsnInput, setConfirmUsnInput] = useState("");
     const [showTour, setShowTour] = useState(false);
     const mobileProfileRef = useRef<HTMLDivElement>(null);
+    const COOLDOWN_MS = 150 * 1000; // 2 minutes 30 seconds
 
     // Close mobile profile dropdown on outside click
     useEffect(() => {
@@ -265,7 +267,7 @@ export default function StudentDashboard() {
 
                         const lastSync = data.details?.last_updated || data.last_updated;
                         if (lastSync) {
-                            const next = new Date(new Date(lastSync).getTime() + 5 * 60 * 1000).toISOString();
+                            const next = new Date(new Date(lastSync).getTime() + COOLDOWN_MS).toISOString();
                             setNextAllowedAt(next);
                         }
                     } else {
@@ -297,7 +299,7 @@ export default function StudentDashboard() {
 
                     const lastSync = data.details?.last_updated || data.last_updated;
                     if (lastSync) {
-                        const next = new Date(new Date(lastSync).getTime() + 5 * 60 * 1000).toISOString();
+                        const next = new Date(new Date(lastSync).getTime() + COOLDOWN_MS).toISOString();
                         setNextAllowedAt(next);
                     }
 
@@ -382,6 +384,7 @@ export default function StudentDashboard() {
         if (!sessionId || !stdUsn) return;
 
         setUpdateStatus('loading');
+        setPortalError(null);
         try {
             const response = await axios.post(`${API_BASE_URL}/api/report/update`, 
                 { usn: stdUsn },
@@ -391,10 +394,11 @@ export default function StudentDashboard() {
             if (response.data.success && response.data.data) {
                 setStudent(response.data.data);
                 setUpdateStatus('success');
+                setPortalError(null);
                 
                 const lastSync = response.data.data.details?.last_updated || response.data.data.last_updated;
                 if (lastSync) {
-                    const next = new Date(new Date(lastSync).getTime() + 5 * 60 * 1000).toISOString();
+                    const next = new Date(new Date(lastSync).getTime() + COOLDOWN_MS).toISOString();
                     setNextAllowedAt(next);
                 }
 
@@ -406,6 +410,20 @@ export default function StudentDashboard() {
             setUpdateStatus('error');
             if (err.response?.status === 429 && err.response?.data?.nextAllowedAt) {
                 setNextAllowedAt(err.response.data.nextAllowedAt);
+            } else {
+                const errorMsg = err.response?.data?.message || err.message || "";
+                const isDown = err.response?.status === 503 || 
+                               err.response?.status === 502 || 
+                               err.response?.status === 504 || 
+                               /portal|down|unreachable|timeout|refusing|maintenance/i.test(errorMsg);
+                if (isDown) {
+                    setPortalError("College portal is currently down. Please check after some time.");
+                } else if (errorMsg && errorMsg.length < 80) {
+                    setPortalError(errorMsg);
+                } else {
+                    setPortalError("College portal is currently down. Please check after some time.");
+                }
+                setTimeout(() => setPortalError(null), 6500);
             }
         } finally {
             setTimeout(() => setUpdateStatus(null), 3000);
@@ -452,6 +470,8 @@ export default function StudentDashboard() {
                         isLoading={updateStatus === 'loading'}
                         cooldownActive={isCooldownActive}
                         formattedCooldown={formatTime}
+                        portalError={portalError}
+                        onClearPortalError={() => setPortalError(null)}
                     />
                 </div>
 
@@ -608,6 +628,8 @@ export default function StudentDashboard() {
                                     updateStatus={updateStatus}
                                     isCooldownActive={isCooldownActive}
                                     formatTime={formatTime}
+                                    portalError={portalError}
+                                    onClearPortalError={() => setPortalError(null)}
                                     examHistory={examHistory}
                                     latestSGPA={latestSGPA}
                                     sgpaDiff={(latestSGPA - prevSGPA >= 0 ? "+" : "") + (latestSGPA - prevSGPA).toFixed(2)}
@@ -665,23 +687,40 @@ export default function StudentDashboard() {
                 ))}
 
                 {/* Mobile Bottom Bar Update Action */}
-                <button
-                    type="button"
-                    className={`bottom-nav-item bottom-nav-update-btn ${isCooldownActive ? 'cooldown' : ''} ${updateStatus === 'loading' ? 'loading' : ''}`}
-                    onClick={handleUpdate}
-                    disabled={updateStatus === 'loading' || isCooldownActive}
-                    title={isCooldownActive ? `Next update in ${formatTime}` : 'Update Dashboard Data'}
-                    aria-label="Update Dashboard Data"
-                >
-                    {isCooldownActive ? (
-                        <Clock size={19} className="bottom-nav-icon" />
-                    ) : (
-                        <RefreshCw size={19} className={`bottom-nav-icon ${updateStatus === 'loading' ? 'spinning' : ''}`} />
+                <div className="mobile-update-btn-wrapper">
+                    {portalError && (
+                        <div className="portal-downtime-popup" role="alert">
+                            <div className="portal-popup-icon" aria-hidden="true">!</div>
+                            <span className="portal-popup-text">{portalError}</span>
+                            <button
+                                type="button"
+                                className="portal-popup-close"
+                                onClick={() => setPortalError(null)}
+                                aria-label="Close notification"
+                            >
+                                <X size={14} />
+                            </button>
+                            <div className="portal-popup-arrow" />
+                        </div>
                     )}
-                    <span>
-                        {updateStatus === 'loading' ? 'Updating' : isCooldownActive ? formatTime : 'Update'}
-                    </span>
-                </button>
+                    <button
+                        type="button"
+                        className={`bottom-nav-item bottom-nav-update-btn ${isCooldownActive ? 'cooldown' : ''} ${updateStatus === 'loading' ? 'loading' : ''}`}
+                        onClick={handleUpdate}
+                        disabled={updateStatus === 'loading' || isCooldownActive}
+                        title={isCooldownActive ? `Next update in ${formatTime}` : 'Update Dashboard Data'}
+                        aria-label="Update Dashboard Data"
+                    >
+                        {isCooldownActive ? (
+                            <Clock size={19} className="bottom-nav-icon" />
+                        ) : (
+                            <RefreshCw size={19} className={`bottom-nav-icon ${updateStatus === 'loading' ? 'spinning' : ''}`} />
+                        )}
+                        <span>
+                            {updateStatus === 'loading' ? 'Updating' : isCooldownActive ? formatTime : 'Update'}
+                        </span>
+                    </button>
+                </div>
             </nav>
 
             {showIOSPrompt && (
