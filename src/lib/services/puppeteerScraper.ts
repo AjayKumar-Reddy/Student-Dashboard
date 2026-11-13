@@ -605,7 +605,7 @@ async function handleSecondaryVerification(
         })
     ]);
 
-    await page.waitForSelector('a[href*="logout"], .dash_od_row, table', { timeout: 3000 }).catch(() => {});
+    await page.waitForSelector('a[href*="logout"], .dash_od_row, table', { timeout: 4000 }).catch(() => {});
 }
 
 async function performPortalLogin(
@@ -740,10 +740,17 @@ async function performPortalLogin(
     let hasLogout = content.toUpperCase().includes("LOGOUT");
     let isDashboardUrl = afterLoginUrl.toLowerCase().includes("dashboard") || afterLoginUrl.toLowerCase().includes("ksign");
 
-    // Fast check: if secondary verification form is active
+    // If not immediately dashboard or logout, wait for either dashboard elements or secondary verification form
     if (!isDashboardUrl && !hasLogout) {
+        await page.waitForSelector('a[href*="logout"], .dash_od_row, table, #id-type-select, .digit-input, #enteredid', { timeout: 6000 }).catch(() => {});
+        afterLoginUrl = page.url();
+        content = await page.content();
+        hasLogout = content.toUpperCase().includes("LOGOUT");
+        isDashboardUrl = afterLoginUrl.toLowerCase().includes("dashboard") || afterLoginUrl.toLowerCase().includes("ksign");
+
         const needsStage2 = await page.$('#id-type-select, .digit-input, #enteredid').catch(() => null);
         if (needsStage2 && last4Digits) {
+            console.log(`[Scraper] Stage 2 verification detected, submitting PIN...`);
             await handleSecondaryVerification(page, authType, last4Digits);
             afterLoginUrl = page.url();
             content = await page.content();
@@ -753,6 +760,8 @@ async function performPortalLogin(
     }
 
     if (!isDashboardUrl && !hasLogout) {
+        const title = await page.title().catch(() => 'unknown');
+        console.error(`[Scraper Diagnostic] Final URL: ${afterLoginUrl} | Title: "${title}" | Preview: ${content.substring(0, 300).replace(/\s+/g, ' ')}`);
         throw new Error("Invalid portal credentials or 4-digit PIN. Please verify your USN, Date of Birth, and PIN.");
     }
 
@@ -790,7 +799,7 @@ const assignTargetData = (scrapedData: any, type: string, courseCode: string, ht
     }
 };
 
-const buildSubPageUrlTargets = (courseRows: Course[]): Map<string, any[]> => {
+const buildSubPageUrlTargets = (courseRows: Course[], classInfo?: string): Map<string, any[]> => {
     const urlToTargets = new Map<string, any[]>();
     const pushTarget = (href: string, courseCode: string, type: string) => {
         const url = resolveParentsUrl(href);
@@ -806,12 +815,22 @@ const buildSubPageUrlTargets = (courseRows: Course[]): Map<string, any[]> => {
 
     const fixedTargets: Array<[string, string, string]> = [
         ["https://parents.msrit.edu/newparents/index.php?option=com_history&task=getResult", "EXAMS", "exams"],
-        ["https://parents.msrit.edu/newparents/index.php?option=com_placement&controller=placement&task=placementeligibility", "PLACEMENT", "placement_eligibility"],
-        ["https://parents.msrit.edu/newparents/index.php?option=com_placement&controller=placement&task=placementstatus", "PLACEMENT", "placement_status"],
-        ["https://parents.msrit.edu/newparents/index.php?option=com_placement&controller=placement&task=placementresults", "PLACEMENT", "placement_results"],
-        ["https://parents.msrit.edu/newparents/index.php?option=com_placement&controller=placement&task=getBasicprofiledetails", "PLACEMENT", "placement_profile"],
         ["https://parents.msrit.edu/newparents/index.php?option=com_studentdashboard&controller=studentdashboard&task=timetable", "TIMETABLE", "timetable"],
     ];
+
+    // MSRIT placement cell is active for 3rd and 4th year students (Sem 5+).
+    // If student year is known and < 3, skip placement to save 4 expensive roundtrips.
+    const currentYear = classInfo ? DataNormalizer.deriveCurrentYearFromClassDetails(classInfo) : 0;
+    const shouldFetchPlacement = currentYear === 0 || currentYear >= 3;
+
+    if (shouldFetchPlacement) {
+        fixedTargets.push(
+            ["https://parents.msrit.edu/newparents/index.php?option=com_placement&controller=placement&task=placementeligibility", "PLACEMENT", "placement_eligibility"],
+            ["https://parents.msrit.edu/newparents/index.php?option=com_placement&controller=placement&task=placementstatus", "PLACEMENT", "placement_status"],
+            ["https://parents.msrit.edu/newparents/index.php?option=com_placement&controller=placement&task=placementresults", "PLACEMENT", "placement_results"],
+            ["https://parents.msrit.edu/newparents/index.php?option=com_placement&controller=placement&task=getBasicprofiledetails", "PLACEMENT", "placement_profile"],
+        );
+    }
 
     for (const [url, courseCode, type] of fixedTargets) {
         urlToTargets.set(url, [{ courseCode, type }]);
@@ -824,43 +843,62 @@ async function fetchSubPagesInBrowser(page: any, content: string) {
     const scrapedData: any = { dashboard: content, attendance: {}, cie: {} };
     const $dash = cheerio.load(content);
     const courseRows = extractCourseRowsFromDashboard($dash);
-    const urlToTargets = buildSubPageUrlTargets(courseRows);
+    const classInfo = $dash("p").first().text().trim() || "";
+    const urlToTargets = buildSubPageUrlTargets(courseRows, classInfo);
 
     const uniqueUrls = [...urlToTargets.keys()];
-    console.log(`[Scraper] Fetching ${uniqueUrls.length} sub-pages concurrently via browser context...`);
+    console.log(`[Scraper] Fetching ${uniqueUrls.length} sub-pages via browser pool (concurrency: 6)...`);
 
-    // Fetch all subpages concurrently within the browser session
+    // Fetch all subpages using a managed concurrency worker pool in browser context
     let htmlMap: Record<string, string> = {};
     try {
         htmlMap = await page.evaluate(async (urls: string[]) => {
             const results: Record<string, string> = {};
-            await Promise.all(urls.map(async (url) => {
-                try {
-                    const resp = await fetch(url, { 
-                        credentials: 'include',
-                        headers: { 'Accept': 'text/html,application/xhtml+xml' }
-                    });
-                    if (resp.ok) {
-                        results[url] = await resp.text();
-                    } else if (resp.status >= 500) {
-                        // Fast single retry on 5xx server glitch
-                        await new Promise(r => setTimeout(r, 150));
-                        const retry = await fetch(url, { credentials: 'include' });
-                        results[url] = retry.ok ? await retry.text() : '';
-                    } else {
-                        results[url] = '';
-                    }
-                } catch {
-                    // Fast single retry on network catch
+            const CONCURRENCY = 6;
+            let index = 0;
+
+            async function worker() {
+                while (index < urls.length) {
+                    const url = urls[index++];
                     try {
-                        await new Promise(r => setTimeout(r, 150));
-                        const retry = await fetch(url, { credentials: 'include' });
-                        results[url] = retry.ok ? await retry.text() : '';
-                    } catch {
+                        const resp = await fetch(url, { 
+                            credentials: 'include',
+                            headers: { 'Accept': 'text/html,application/xhtml+xml' },
+                            signal: AbortSignal.timeout(6000)
+                        });
+                        if (resp.ok) {
+                            results[url] = await resp.text();
+                            continue;
+                        }
+                        if (resp.status >= 500) {
+                            // Fast single retry on 5xx server glitch with 3s timeout
+                            await new Promise(r => setTimeout(r, 150));
+                            const retry = await fetch(url, { 
+                                credentials: 'include',
+                                signal: AbortSignal.timeout(3000)
+                            });
+                            results[url] = retry.ok ? await retry.text() : '';
+                            continue;
+                        }
                         results[url] = '';
+                    } catch {
+                        // Fast single retry on network catch with 3s timeout
+                        try {
+                            await new Promise(r => setTimeout(r, 150));
+                            const retry = await fetch(url, { 
+                                credentials: 'include',
+                                signal: AbortSignal.timeout(3000)
+                            });
+                            results[url] = retry.ok ? await retry.text() : '';
+                        } catch {
+                            results[url] = '';
+                        }
                     }
                 }
-            }));
+            }
+
+            const pool = Array.from({ length: Math.min(CONCURRENCY, urls.length) }, () => worker());
+            await Promise.all(pool);
             return results;
         }, uniqueUrls);
     } catch (err: any) {
@@ -875,7 +913,7 @@ async function fetchSubPagesInBrowser(page: any, content: string) {
         const cookies = await page.cookies().catch(() => []);
         const cookieString = cookies.map((c: any) => `${c.name}=${c.value}`).join('; ');
         const axiosInstance = axios.create({
-            timeout: 8000,
+            timeout: 5000,
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
                 'Cookie': cookieString
@@ -916,9 +954,12 @@ const getCompleteStudentData = async (
     let browserContext: any = null;
     let page: any = null;
     const isRemote = Boolean(process.env.BROWSERLESS_TOKEN);
+    const startTime = Date.now();
 
     try {
         browser = await getBrowserInstance();
+        const connectTime = Date.now() - startTime;
+        console.log(`[Scraper Timing] Browser ready in ${(connectTime / 1000).toFixed(2)}s`);
 
         if (!isRemote && typeof browser.createBrowserContext === 'function') {
             browserContext = await browser.createBrowserContext();
@@ -927,7 +968,8 @@ const getCompleteStudentData = async (
             page = await browser.newPage();
         }
 
-        await page.setDefaultNavigationTimeout(35000);
+        await page.setDefaultNavigationTimeout(25000);
+        await page.setViewport({ width: 800, height: 600 });
         await page.setUserAgent(
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'
         );
@@ -936,30 +978,18 @@ const getCompleteStudentData = async (
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
         });
 
-        // Only do request interception for local non-remote browser to avoid remote WebSocket latency
-        if (!isRemote) {
-            await page.setRequestInterception(true);
-            page.on('request', (req: any) => {
-                const rt = req.resourceType();
-                const url = req.url();
-                if (
-                    ['image', 'font', 'media', 'imageset'].includes(rt) ||
-                    url.endsWith('.png') || url.endsWith('.jpg') || url.endsWith('.jpeg') ||
-                    url.endsWith('.gif') || url.endsWith('.woff') ||
-                    url.endsWith('.woff2') || url.endsWith('.ttf') || url.endsWith('.ico')
-                ) {
-                    req.abort();
-                } else {
-                    req.continue();
-                }
-            });
-        }
-
+        const loginStart = Date.now();
         const content = await performPortalLogin(page, usn, day, month, year, authType, last4Digits);
+        const loginTime = Date.now() - loginStart;
+        console.log(`[Scraper Timing] Portal login completed in ${(loginTime / 1000).toFixed(2)}s`);
         
         // Fetch sub-pages INSIDE the browser session (uses Browserless IP, prevents user IP blocks!)
+        const subPageStart = Date.now();
         const scrapedData = await fetchSubPagesInBrowser(page, content);
+        const subPageTime = Date.now() - subPageStart;
+        console.log(`[Scraper Timing] Sub-pages fetched in ${(subPageTime / 1000).toFixed(2)}s`);
 
+        // Close page and browser immediately to release Browserless containers and save billing units
         if (page) {
             await page.close().catch(() => {});
             page = null;
@@ -972,6 +1002,9 @@ const getCompleteStudentData = async (
             await browser.close().catch(() => {});
             browser = null;
         }
+
+        const totalScrapeTime = Date.now() - startTime;
+        console.log(`[Scraper Timing] Total scraping completed in ${(totalScrapeTime / 1000).toFixed(2)}s`);
 
         return scrapedData;
 
