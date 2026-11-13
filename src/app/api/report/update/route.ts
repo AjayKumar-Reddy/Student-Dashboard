@@ -40,23 +40,28 @@ export async function POST(request: Request) {
       );
     }
 
-    // Cooldown check (5 minutes = 300,000ms)
-    const COOLDOWN_MS = 5 * 60 * 1000;
+    // Cooldown check (2 minutes 30 seconds = 150,000ms)
+    const COOLDOWN_MS = 150 * 1000;
     const detailsBlob = (student.details as any) || {};
-    const lastSyncStr = detailsBlob?.last_updated;
+    const lastSyncDate = student.last_updated || (detailsBlob?.last_updated ? new Date(detailsBlob.last_updated) : null);
 
-    if (lastSyncStr) {
-      const lastSync = new Date(lastSyncStr).getTime();
+    if (lastSyncDate) {
+      const lastSync = new Date(lastSyncDate).getTime();
       const now = Date.now();
       const diff = now - lastSync;
 
       if (diff < COOLDOWN_MS && !body.bypassCooldown) {
         const remaining = COOLDOWN_MS - diff;
+        const remainingSec = Math.ceil(remaining / 1000);
+        const remM = Math.floor(remainingSec / 60);
+        const remS = remainingSec % 60;
+        const timeStr = remM > 0 ? `${remM}m ${remS}s` : `${remS}s`;
+
         return NextResponse.json(
           {
             success: false,
             allowed: false,
-            message: `Rate limit exceeded. Please wait ${Math.ceil(remaining / 60000)}m before updating again.`,
+            message: `Rate limit exceeded. Please wait ${timeStr} before updating again.`,
             nextAllowedAt: new Date(lastSync + COOLDOWN_MS).toISOString(),
           },
           { status: 429 }
@@ -103,9 +108,28 @@ export async function POST(request: Request) {
     });
   } catch (error: any) {
     console.error(`[Update API Error]`, error);
+    const errorMessage = error?.message || "An internal server error occurred while updating data.";
+    const lowerMessage = errorMessage.toLowerCase();
+
+    const isPortalDown =
+      lowerMessage.includes("unreachable") ||
+      lowerMessage.includes("refusing") ||
+      lowerMessage.includes("offline") ||
+      lowerMessage.includes("maintenance") ||
+      lowerMessage.includes("timeout") ||
+      lowerMessage.includes("timed out") ||
+      lowerMessage.includes("failed to reach") ||
+      lowerMessage.includes("high traffic");
+
+    const isAuthError =
+      lowerMessage.includes("invalid portal credentials") ||
+      lowerMessage.includes("pin");
+
+    const statusCode = isPortalDown ? 503 : isAuthError ? 401 : 500;
+
     return NextResponse.json(
-      { success: false, message: error.message || "An internal server error occurred while updating data." },
-      { status: 500 }
+      { success: false, message: errorMessage },
+      { status: statusCode }
     );
   }
 }

@@ -493,8 +493,11 @@ let sharedBrowser: any = null;
 const getBrowserInstance = async () => {
     const browserlessToken = process.env.BROWSERLESS_TOKEN;
     if (browserlessToken) {
+        const wsEndpoint = `wss://chrome.browserless.io?token=${browserlessToken}&--ignore-certificate-errors=true&--ignore-certificate-errors-spki-list=true&--disable-web-security=true&--blink-settings=imagesEnabled=false&stealth=true&--disable-features=TranslateUI,BlinkGenPropertyTrees&--disable-ipc-flooding-protection`;
+        console.log('[Scraper] Connecting to Browserless.io (cloud container)...');
         return await puppeteer.connect({
-            browserWSEndpoint: `wss://chrome.browserless.io?token=${browserlessToken}`
+            browserWSEndpoint: wsEndpoint,
+            ignoreHTTPSErrors: true
         });
     }
 
@@ -504,6 +507,7 @@ const getBrowserInstance = async () => {
 
     sharedBrowser = await puppeteer.launch({
         headless: true,
+        ignoreHTTPSErrors: true,
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
@@ -511,6 +515,10 @@ const getBrowserInstance = async () => {
             '--disable-accelerated-2d-canvas',
             '--disable-gpu',
             '--disable-extensions',
+            '--ignore-certificate-errors',
+            '--ignore-certificate-errors-spki-list',
+            '--disable-web-security',
+            '--blink-settings=imagesEnabled=false',
             '--disable-background-networking',
             '--disable-background-timer-throttling',
             '--disable-backgrounding-occluded-windows',
@@ -560,48 +568,44 @@ async function handleSecondaryVerification(
         return;
     }
 
-    if (hasSelect) {
-        await page.evaluate((targetAuthType: string) => {
-            const sel = document.querySelector('#id-type-select, select[name="idType"]') as HTMLSelectElement;
-            if (sel) {
-                const cleanTarget = (targetAuthType || '').toLowerCase();
-                let targetValue = '1';
-                if (cleanTarget.includes('mother') || cleanTarget === '2') {
-                    targetValue = '2';
-                } else if (cleanTarget.includes('abc') || cleanTarget === '3') {
-                    targetValue = '3';
-                }
-                sel.value = targetValue;
-                sel.dispatchEvent(new Event('change', { bubbles: true }));
+    // Set auth dropdown and digits in ONE single evaluate call
+    await page.evaluate((targetAuthType: string, digits: string) => {
+        const sel = document.querySelector('#id-type-select, select[name="idType"]') as HTMLSelectElement;
+        if (sel) {
+            const cleanTarget = (targetAuthType || '').toLowerCase();
+            let targetValue = '1';
+            if (cleanTarget.includes('mother') || cleanTarget === '2') {
+                targetValue = '2';
+            } else if (cleanTarget.includes('abc') || cleanTarget === '3') {
+                targetValue = '3';
             }
-        }, authType || '');
-    }
+            sel.value = targetValue;
+            sel.dispatchEvent(new Event('change', { bubbles: true }));
+        }
 
-    await page.evaluate((digits: string) => {
         const inputs = Array.from(document.querySelectorAll('.digit-input')) as HTMLInputElement[];
         const cleanDigits = String(digits).replace(/\D/g, '');
-        
         for (let i = 0; i < inputs.length && i < cleanDigits.length; i++) {
             inputs[i].value = cleanDigits[i];
             inputs[i].dispatchEvent(new Event('input', { bubbles: true }));
             inputs[i].dispatchEvent(new Event('change', { bubbles: true }));
         }
-        
+
         const hiddenField = document.getElementById('enteredid') as HTMLInputElement;
         if (hiddenField) {
             hiddenField.value = cleanDigits;
         }
-    }, last4Digits);
+    }, authType || '', last4Digits);
 
     await Promise.all([
-        page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => {}),
+        page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => {}),
         page.evaluate(() => {
             const btn = document.querySelector('#btn-submit, input[type="submit"], button[type="submit"]') as HTMLElement;
             if (btn) btn.click();
         })
     ]);
 
-    await page.waitForSelector('a[href*="logout"], .dash_od_row, table', { timeout: 8000 }).catch(() => {});
+    await page.waitForSelector('a[href*="logout"], .dash_od_row, table', { timeout: 3000 }).catch(() => {});
 }
 
 async function performPortalLogin(
@@ -613,47 +617,139 @@ async function performPortalLogin(
     authType?: string,
     last4Digits?: string
 ) {
-    await page.goto("https://parents.msrit.edu/newparents/", { waitUntil: 'domcontentloaded', timeout: 30000 });
-    await page.type('#username', usn);
-    
-    // Select day robustly regardless of trailing spaces
-    await page.evaluate((dStr: string) => {
-        const sel = document.getElementById('dd') as HTMLSelectElement;
-        if (sel) {
-            const opt = Array.from(sel.options).find(o => o.value.trim() === dStr.trim());
-            if (opt) {
-                sel.value = opt.value;
-                sel.dispatchEvent(new Event('change', { bubbles: true }));
+    let navResponse: any = null;
+    let lastNavError: any = null;
+
+    // Retry once in case of temporary handshake resets or slow DNS
+    for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+            console.log(`[Scraper] Navigating to college portal (attempt ${attempt})...`);
+            navResponse = await page.goto("https://parents.msrit.edu/newparents/", { 
+                waitUntil: 'domcontentloaded', 
+                timeout: 30000 
+            });
+
+            // Bypass any Chrome SSL warning interstitial if present
+            await page.evaluate(() => {
+                const details = document.getElementById('details-button');
+                if (details) details.click();
+                const proceed = document.getElementById('proceed-link');
+                if (proceed) proceed.click();
+            }).catch(() => {});
+
+            const url = page.url();
+            if (!url.includes('chrome-error://') && url !== 'about:blank') {
+                lastNavError = null;
+                break;
+            }
+        } catch (err: any) {
+            lastNavError = err;
+            if (attempt < 2) {
+                await new Promise((r) => setTimeout(r, 1500));
             }
         }
-    }, day);
+    }
 
-    await page.select('#mm', month);
-    await page.select('#yyyy', year);
+    const currentUrl = page.url();
+    if (lastNavError || currentUrl.includes('chrome-error://') || currentUrl === 'about:blank') {
+        throw new Error(
+            `College portal (parents.msrit.edu) is currently unreachable or refusing connection. Please try again later. (${lastNavError?.message || 'Connection refused'})`
+        );
+    }
+
+    if (navResponse && navResponse.status() >= 500) {
+        throw new Error(`College portal responded with HTTP ${navResponse.status()}. The server is temporarily unavailable.`);
+    }
+
+    // Explicitly wait for login form fields (username, password, date select)
+    const loginSelector = '#username, input[name="username"], input[name="usn"], input[type="text"], #dd';
+    try {
+        await page.waitForSelector(loginSelector, { timeout: 10000 });
+    } catch {
+        const finalUrl = page.url();
+        const pageTitle = await page.title().catch(() => 'unknown');
+        const content = await page.content().catch(() => '');
+        console.error(`[Scraper Diagnostic] URL: ${finalUrl} | Title: "${pageTitle}" | Preview: ${content.substring(0, 300).replace(/\s+/g, ' ')}`);
+
+        // Check if Chrome SSL interstitial was showing
+        const sslBypassed = await page.evaluate(() => {
+            const details = document.getElementById('details-button');
+            if (details) details.click();
+            const proceed = document.getElementById('proceed-link');
+            if (proceed) {
+                proceed.click();
+                return true;
+            }
+            return false;
+        }).catch(() => false);
+
+        if (sslBypassed) {
+            console.log('[Scraper] Clicked SSL proceed link, waiting for login form...');
+            await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 10000 }).catch(() => {});
+            await page.waitForSelector(loginSelector, { timeout: 10000 });
+        } else if (finalUrl.includes('chrome-error://') || finalUrl === 'about:blank') {
+            throw new Error("Unable to connect to college portal (parents.msrit.edu). The server refused connection or timed out.");
+        } else if (pageTitle.toLowerCase().includes('403') || content.toLowerCase().includes('access denied')) {
+            throw new Error("College portal denied access (403 Forbidden). Rate limit or firewall is currently active.");
+        } else if (content.toLowerCase().includes('maintenance') || content.toLowerCase().includes('service unavailable')) {
+            throw new Error("The college parent portal is currently undergoing maintenance. Please try again later.");
+        } else {
+            throw new Error(`College portal page loaded ("${pageTitle}"), but the login form fields were not found.`);
+        }
+    }
+
+    // Fill USN, Day, Month, and Year in ONE evaluate call for ultra-fast execution
+    await page.evaluate((u: string, dStr: string, mStr: string, yStr: string) => {
+        const uInput = document.querySelector('#username, input[name="username"], input[name="usn"], input[type="text"]') as HTMLInputElement;
+        if (uInput) {
+            uInput.value = u;
+            uInput.dispatchEvent(new Event('input', { bubbles: true }));
+            uInput.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
+        const dSel = document.getElementById('dd') as HTMLSelectElement;
+        if (dSel) {
+            const opt = Array.from(dSel.options).find(o => o.value.trim() === dStr.trim());
+            if (opt) dSel.value = opt.value;
+            dSel.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
+        const mSel = document.getElementById('mm') as HTMLSelectElement;
+        if (mSel) {
+            mSel.value = mStr;
+            mSel.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
+        const ySel = document.getElementById('yyyy') as HTMLSelectElement;
+        if (ySel) {
+            ySel.value = yStr;
+            ySel.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    }, usn, day, month, year);
     
     await Promise.all([
-        page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => {}),
+        page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => {}),
         page.evaluate(() => {
             const btn = document.querySelector('.cn-login-btn, input[type="submit"], button[type="submit"]') as HTMLElement;
             if (btn) btn.click();
         })
     ]);
 
-    // Explicitly wait for stage 2 elements OR dashboard elements to resolve in DOM
-    await page.waitForSelector('#id-type-select, .digit-input, #enteredid, a[href*="logout"], table', { timeout: 8000 }).catch(() => {});
-
-    let currentUrl = page.url();
+    let afterLoginUrl = page.url();
     let content = await page.content();
     let hasLogout = content.toUpperCase().includes("LOGOUT");
-    let isDashboardUrl = currentUrl.toLowerCase().includes("dashboard") || currentUrl.toLowerCase().includes("ksign");
+    let isDashboardUrl = afterLoginUrl.toLowerCase().includes("dashboard") || afterLoginUrl.toLowerCase().includes("ksign");
 
-    // Check if secondary verification form is required
+    // Fast check: if secondary verification form is active
     if (!isDashboardUrl && !hasLogout) {
-        await handleSecondaryVerification(page, authType, last4Digits);
-        currentUrl = page.url();
-        content = await page.content();
-        hasLogout = content.toUpperCase().includes("LOGOUT");
-        isDashboardUrl = currentUrl.toLowerCase().includes("dashboard") || currentUrl.toLowerCase().includes("ksign");
+        const needsStage2 = await page.$('#id-type-select, .digit-input, #enteredid').catch(() => null);
+        if (needsStage2 && last4Digits) {
+            await handleSecondaryVerification(page, authType, last4Digits);
+            afterLoginUrl = page.url();
+            content = await page.content();
+            hasLogout = content.toUpperCase().includes("LOGOUT");
+            isDashboardUrl = afterLoginUrl.toLowerCase().includes("dashboard") || afterLoginUrl.toLowerCase().includes("ksign");
+        }
     }
 
     if (!isDashboardUrl && !hasLogout) {
@@ -724,36 +820,81 @@ const buildSubPageUrlTargets = (courseRows: Course[]): Map<string, any[]> => {
     return urlToTargets;
 };
 
-async function fetchSubPagesInParallel(cookieString: string, content: string) {
+async function fetchSubPagesInBrowser(page: any, content: string) {
     const scrapedData: any = { dashboard: content, attendance: {}, cie: {} };
     const $dash = cheerio.load(content);
     const courseRows = extractCourseRowsFromDashboard($dash);
     const urlToTargets = buildSubPageUrlTargets(courseRows);
 
-    const axiosInstance = axios.create({
-        timeout: 10000,
-        headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-            'Cookie': cookieString
-        },
-        httpsAgent: sharedHttpsAgent
-    });
-
     const uniqueUrls = [...urlToTargets.keys()];
-    const fetchPromises = uniqueUrls.map(async (url) => {
-        try {
-            const resp = await axiosInstance.get(url);
-            return { url, html: resp.data };
-        } catch {
-            return { url, html: "" };
-        }
-    });
+    console.log(`[Scraper] Fetching ${uniqueUrls.length} sub-pages concurrently via browser context...`);
 
-    const fetched = await Promise.all(fetchPromises);
-    const htmlByUrl = new Map(fetched.map((f) => [f.url, f.html]));
+    // Fetch all subpages concurrently within the browser session
+    let htmlMap: Record<string, string> = {};
+    try {
+        htmlMap = await page.evaluate(async (urls: string[]) => {
+            const results: Record<string, string> = {};
+            await Promise.all(urls.map(async (url) => {
+                try {
+                    const resp = await fetch(url, { 
+                        credentials: 'include',
+                        headers: { 'Accept': 'text/html,application/xhtml+xml' }
+                    });
+                    if (resp.ok) {
+                        results[url] = await resp.text();
+                    } else if (resp.status >= 500) {
+                        // Fast single retry on 5xx server glitch
+                        await new Promise(r => setTimeout(r, 150));
+                        const retry = await fetch(url, { credentials: 'include' });
+                        results[url] = retry.ok ? await retry.text() : '';
+                    } else {
+                        results[url] = '';
+                    }
+                } catch {
+                    // Fast single retry on network catch
+                    try {
+                        await new Promise(r => setTimeout(r, 150));
+                        const retry = await fetch(url, { credentials: 'include' });
+                        results[url] = retry.ok ? await retry.text() : '';
+                    } catch {
+                        results[url] = '';
+                    }
+                }
+            }));
+            return results;
+        }, uniqueUrls);
+    } catch (err: any) {
+        console.warn(`[Scraper] In-browser subpage fetch error: ${err?.message}, falling back to axios...`);
+        htmlMap = {};
+    }
+
+    // Safety fallback: if in-browser fetch returned nothing, use parallel Axios with the page cookies
+    const hasAnyHtml = Object.values(htmlMap).some((h) => Boolean(h && h.length > 50));
+    if (!hasAnyHtml && uniqueUrls.length > 0) {
+        console.log('[Scraper] Using axios fallback for subpages...');
+        const cookies = await page.cookies().catch(() => []);
+        const cookieString = cookies.map((c: any) => `${c.name}=${c.value}`).join('; ');
+        const axiosInstance = axios.create({
+            timeout: 8000,
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+                'Cookie': cookieString
+            },
+            httpsAgent: sharedHttpsAgent
+        });
+
+        await Promise.all(uniqueUrls.map(async (url) => {
+            try {
+                const resp = await axiosInstance.get(url);
+                htmlMap[url] = resp.data || '';
+            } catch {
+                htmlMap[url] = '';
+            }
+        }));
+    }
 
     for (const [url, targets] of urlToTargets) {
-        const html = htmlByUrl.get(url) ?? "";
+        const html = htmlMap[url] ?? "";
         for (const t of targets) {
             assignTargetData(scrapedData, t.type, t.courseCode, html);
         }
@@ -786,27 +927,38 @@ const getCompleteStudentData = async (
             page = await browser.newPage();
         }
 
-        await page.setDefaultNavigationTimeout(30000);
-
-        await page.setRequestInterception(true);
-        page.on('request', (req: any) => {
-            const rt = req.resourceType();
-            const url = req.url();
-            if (
-                ['image', 'stylesheet', 'font', 'media', 'imageset'].includes(rt) ||
-                url.endsWith('.png') || url.endsWith('.jpg') || url.endsWith('.jpeg') ||
-                url.endsWith('.gif') || url.endsWith('.css') || url.endsWith('.woff') ||
-                url.endsWith('.woff2') || url.endsWith('.ttf') || url.endsWith('.ico')
-            ) {
-                req.abort();
-            } else {
-                req.continue();
-            }
+        await page.setDefaultNavigationTimeout(35000);
+        await page.setUserAgent(
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'
+        );
+        await page.setExtraHTTPHeaders({
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
         });
 
+        // Only do request interception for local non-remote browser to avoid remote WebSocket latency
+        if (!isRemote) {
+            await page.setRequestInterception(true);
+            page.on('request', (req: any) => {
+                const rt = req.resourceType();
+                const url = req.url();
+                if (
+                    ['image', 'font', 'media', 'imageset'].includes(rt) ||
+                    url.endsWith('.png') || url.endsWith('.jpg') || url.endsWith('.jpeg') ||
+                    url.endsWith('.gif') || url.endsWith('.woff') ||
+                    url.endsWith('.woff2') || url.endsWith('.ttf') || url.endsWith('.ico')
+                ) {
+                    req.abort();
+                } else {
+                    req.continue();
+                }
+            });
+        }
+
         const content = await performPortalLogin(page, usn, day, month, year, authType, last4Digits);
-        const cookies = await page.cookies();
-        const cookieString = cookies.map((c: any) => `${c.name}=${c.value}`).join('; ');
+        
+        // Fetch sub-pages INSIDE the browser session (uses Browserless IP, prevents user IP blocks!)
+        const scrapedData = await fetchSubPagesInBrowser(page, content);
 
         if (page) {
             await page.close().catch(() => {});
@@ -821,7 +973,7 @@ const getCompleteStudentData = async (
             browser = null;
         }
 
-        return await fetchSubPagesInParallel(cookieString, content);
+        return scrapedData;
 
     } catch (error: any) {
         console.error(`[X] Automation Error: ${error.message}`);

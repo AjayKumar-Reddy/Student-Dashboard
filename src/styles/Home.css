@@ -34,8 +34,43 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
     flex-wrap: nowrap;
+}
+
+.home-profile-top .update-btn-wrapper {
+    width: auto;
+    margin-left: auto;
+    flex-shrink: 0;
+    align-items: flex-end;
+}
+
+.home-profile-top .portal-downtime-popup {
+    right: 0;
+    left: auto;
+    transform: none;
+    animation: popupSlideUpRight 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes popupSlideUpRight {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.home-profile-top .portal-popup-arrow {
+    right: 32px;
+    left: auto;
+    transform: none;
+}
+
+.home-profile-top .portal-popup-arrow::before {
+    left: -8px;
 }
 
 .home-profile-identity {
@@ -78,8 +113,9 @@
 .home-profile-greeting {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 3px;
     min-width: 0;
+    flex: 1 1 auto;
 }
 
 .home-profile-name {
@@ -89,9 +125,9 @@
     margin: 0;
     line-height: 1.3;
     letter-spacing: -0.3px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 
 .home-profile-usn {
@@ -726,7 +762,11 @@
     }
 
     .home-profile-name {
-        font-size: 16px;
+        font-size: 15.5px;
+        line-height: 1.3;
+        white-space: normal;
+        overflow-wrap: break-word;
+        word-break: break-word;
     }
 
     .home-profile-usn {

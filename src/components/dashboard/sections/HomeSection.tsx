@@ -47,6 +47,8 @@ interface HomeSectionProps {
     isImproved?: boolean;
     onSelectSubject?: (subject: any) => void;
     initialShowFullTimetable?: boolean;
+    portalError?: string | null;
+    onClearPortalError?: () => void;
 }
 
 const DAY_ORDER = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
@@ -93,7 +95,9 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
     updateStatus,
     isCooldownActive,
     formatTime,
-    initialShowFullTimetable = false
+    initialShowFullTimetable = false,
+    portalError,
+    onClearPortalError
 }) => {
     const [showFullTimetable, setShowFullTimetable] = useState(initialShowFullTimetable);
     const todayName = getTodayDayName();
@@ -302,6 +306,8 @@ export const HomeSection: React.FC<HomeSectionProps> = ({
                         isLoading={updateStatus === 'loading'}
                         cooldownActive={isCooldownActive}
                         formattedCooldown={formatTime}
+                        portalError={portalError}
+                        onClearPortalError={onClearPortalError}
                     />
                 </div>
 
